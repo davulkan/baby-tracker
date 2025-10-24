@@ -547,7 +547,8 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           ElevatedButton.icon(
             onPressed: _isTimerRunning ? _pauseTimer : _resumeTimer,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _isTimerRunning ? Colors.orange : const Color(0xFF6366F1),
+              backgroundColor:
+                  _isTimerRunning ? Colors.orange : const Color(0xFF6366F1),
               padding: const EdgeInsets.symmetric(
                 horizontal: 32,
                 vertical: 16,

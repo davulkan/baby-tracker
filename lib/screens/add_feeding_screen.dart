@@ -608,7 +608,8 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         }
       }
     });
-    print('DEBUG: After setState - Left: $_isLeftActive ($_leftSeconds sec), Right: $_isRightActive ($_rightSeconds sec), isTimerRunning: $_isTimerRunning');
+    print(
+        'DEBUG: After setState - Left: $_isLeftActive ($_leftSeconds sec), Right: $_isRightActive ($_rightSeconds sec), isTimerRunning: $_isTimerRunning');
 
     // Обновляем детали кормления
     if (_activeEventId != null) {

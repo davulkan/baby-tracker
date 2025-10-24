@@ -1155,7 +1155,8 @@ class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
         .listen((snapshot) {
       if (snapshot.exists && mounted) {
         final updatedEvent = Event.fromFirestore(snapshot);
-        print('DEBUG LiveTimer: Event ${widget.event.id} updated - endedAt: ${updatedEvent.endedAt}');
+        print(
+            'DEBUG LiveTimer: Event ${widget.event.id} updated - endedAt: ${updatedEvent.endedAt}');
         setState(() {
           _currentEvent = updatedEvent;
         });
@@ -1187,9 +1188,10 @@ class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
       if (timerState != null && timerState['eventId'] == currentEvent.id) {
         final isLeftActive = timerState['isLeftActive'] ?? false;
         final isRightActive = timerState['isRightActive'] ?? false;
-        
+
         if (!isLeftActive && !isRightActive) {
-          print('DEBUG LiveTimer: Event ${currentEvent.id} - both breasts paused, hiding timer');
+          print(
+              'DEBUG LiveTimer: Event ${currentEvent.id} - both breasts paused, hiding timer');
           return '';
         }
 
@@ -1197,8 +1199,9 @@ class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
         final leftSeconds = timerState['leftSeconds'] ?? 0;
         final rightSeconds = timerState['rightSeconds'] ?? 0;
         final totalSeconds = leftSeconds + rightSeconds;
-        
-        print('DEBUG LiveTimer: Event ${currentEvent.id} - from TimerStorage: Left=$leftSeconds, Right=$rightSeconds, Total=$totalSeconds');
+
+        print(
+            'DEBUG LiveTimer: Event ${currentEvent.id} - from TimerStorage: Left=$leftSeconds, Right=$rightSeconds, Total=$totalSeconds');
         return _formatDuration(totalSeconds);
       }
     }
@@ -1208,7 +1211,8 @@ class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
     final diff = now.difference(currentEvent.startedAt);
     final totalSeconds = diff.inSeconds;
 
-    print('DEBUG LiveTimer: Event ${currentEvent.id} - showing ${_formatDuration(totalSeconds)}');
+    print(
+        'DEBUG LiveTimer: Event ${currentEvent.id} - showing ${_formatDuration(totalSeconds)}');
     return _formatDuration(totalSeconds);
   }
 
