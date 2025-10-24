@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "152733126646",
+    "project_id": "ftracker-baby",
+    "storage_bucket": "ftracker-baby.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:152733126646:android:ae88ef0debc20ab8c201d7",
+        "android_client_info": {
+          "package_name": "com.example.baby_tracker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "152733126646-p86t05oljic9bou5fhqk5tt64n0ilkug.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.baby_tracker",
+            "certificate_hash": "b88de730e374b3cba187022bf9506e4cbafdac90"
+          }
+        },
+        {
+          "client_id": "152733126646-mdcbme9st55i6t5lv6mjqo9i5qk519eo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB8EUoGhUTtq_j1Joe2Y8qmxW7YynB7SBs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "152733126646-mdcbme9st55i6t5lv6mjqo9i5qk519eo.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "152733126646-jsn6j6if465tdjvhaogec5ms6g1p43gg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.babyTracker"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
