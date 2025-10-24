@@ -246,8 +246,9 @@ class AuthProvider with ChangeNotifier {
     var code = 'JOIN-';
 
     // Используем более случайную генерацию
-    for (var i = 0; i < 6; i++) {
-      final randomIndex = (random * (i + 1) + DateTime.now().microsecond) % chars.length;
+    for (var i = 0; i < 10; i++) {
+      final randomIndex =
+          (random * (i + 1) + DateTime.now().microsecond) % chars.length;
       code += chars[randomIndex];
     }
 
@@ -289,15 +290,13 @@ class AuthProvider with ChangeNotifier {
     if (_familyId == null) return null;
 
     try {
-      final familyDoc = await _firestore
-          .collection('families')
-          .doc(_familyId!)
-          .get();
+      final familyDoc =
+          await _firestore.collection('families').doc(_familyId!).get();
 
       if (!familyDoc.exists) return null;
 
       final familyData = familyDoc.data()!;
-      
+
       // Получаем список участников
       final membersSnapshot = await _firestore
           .collection('families')

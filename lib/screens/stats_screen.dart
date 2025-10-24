@@ -272,6 +272,13 @@ class _StatsScreenState extends State<StatsScreen>
             const Color(0xFFF59E0B),
             EventType.diaper,
           ),
+          const SizedBox(width: 16),
+          _buildCategoryIcon(
+            Icons.local_drink,
+            'Бутылка',
+            const Color(0xFFEC4899),
+            EventType.bottle,
+          ),
         ],
       ),
     );
@@ -358,6 +365,12 @@ class _StatsScreenState extends State<StatsScreen>
               '${stats['diaperCount']} раз',
               const Color(0xFFF59E0B),
             ),
+            _buildStatItem(
+              Icons.local_drink,
+              '', // Пока без объема
+              '${stats['bottleCount']} раз',
+              const Color(0xFFEC4899),
+            ),
           ],
         ),
       ],
@@ -376,6 +389,8 @@ class _StatsScreenState extends State<StatsScreen>
     int feedingCount = 0;
     int feedingTotalMinutes = 0;
     int diaperCount = 0;
+    int bottleCount = 0;
+    double totalBottleVolume = 0.0;
 
     for (final event in dayEvents) {
       switch (event.eventType) {
@@ -394,6 +409,11 @@ class _StatsScreenState extends State<StatsScreen>
         case EventType.diaper:
           diaperCount++;
           break;
+        case EventType.bottle:
+          bottleCount++;
+          // Пока показываем только количество, объем добавим позже
+          // когда обновим структуру данных
+          break;
         default:
           break;
       }
@@ -410,6 +430,8 @@ class _StatsScreenState extends State<StatsScreen>
       'feedingMinutes': feedingTotalMinutes % 60,
       'feedingCount': feedingCount,
       'diaperCount': diaperCount,
+      'bottleCount': bottleCount,
+      'bottleVolume': totalBottleVolume,
       'chartEvents': chartEvents,
     };
   }
@@ -431,6 +453,9 @@ class _StatsScreenState extends State<StatsScreen>
           break;
         case EventType.diaper:
           color = const Color(0xFFF59E0B);
+          break;
+        case EventType.bottle:
+          color = const Color(0xFFEC4899);
           break;
         default:
           color = Colors.grey;

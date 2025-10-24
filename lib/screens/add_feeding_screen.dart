@@ -8,6 +8,7 @@ import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/models/event.dart';
+import 'package:baby_tracker/services/timer_storage_service.dart';
 
 enum FeedingMode {
   breast,
@@ -40,7 +41,12 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   Timer? _timer;
   int _leftSeconds = 0;
   int _rightSeconds = 0;
-  bool _isTimingLeft = true;
+  bool _isLeftActive = false;
+  bool _isRightActive = false;
+  bool _isPaused = false;
+  String? _activeEventId;
+
+  final _timerStorage = TimerStorageService();
 
   @override
   void initState() {
@@ -49,40 +55,220 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   }
 
   Future<void> _initializeData() async {
+    final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
+    final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+
     if (widget.event != null) {
       // Загружаем данные для редактирования
       _startTime = widget.event!.startedAt;
       if (widget.event!.endedAt != null) {
+        // Завершенное событие - редактирование, таймеры недоступны
         _endTime = widget.event!.endedAt!;
+        _isManualMode = true; // Только ручной режим для завершенных событий
+      } else {
+        // Это активное событие - включаем таймер
+        _isManualMode = false; // Переключаем в режим таймера
+        _isTimerRunning = true;
+        _activeEventId = widget.event!.id;
+        final diff = DateTime.now().difference(widget.event!.startedAt);
+        final totalSeconds = diff.inSeconds;
+
+        if (widget.event!.notes != null) {
+          _notesController.text = widget.event!.notes!;
+        }
+
+        // Пытаемся загрузить состояние из TimerStorage
+        final timerState = await _timerStorage.getTimerState();
+        bool hasTimerState =
+            timerState != null && timerState['eventId'] == widget.event!.id;
+
+        print('DEBUG: Loading event ${widget.event!.id}');
+        print('DEBUG: TimerStorage state: $timerState');
+        print('DEBUG: Has timer state: $hasTimerState');
+
+        // Приоритет: сначала восстанавливаем из TimerStorage (самое актуальное)
+        if (hasTimerState) {
+          _leftSeconds = timerState['leftSeconds'] ?? 0;
+          _rightSeconds = timerState['rightSeconds'] ?? 0;
+          _isLeftActive = timerState['isLeftActive'] ?? false;
+          _isRightActive = timerState['isRightActive'] ?? false;
+          print(
+              'DEBUG: Restored from TimerStorage - Left: $_leftSeconds ($_isLeftActive), Right: $_rightSeconds ($_isRightActive)');
+
+          // Обновляем UI сразу
+          setState(() {});
+        } else {
+          // Если нет TimerStorage, используем totalSeconds
+          _isLeftActive = true;
+          _isRightActive = false;
+          _leftSeconds = totalSeconds;
+          print('DEBUG: No TimerStorage, using totalSeconds: $totalSeconds');
+        }
+
+        // Загружаем детали кормления для дополнительной информации
+        _existingDetails =
+            await eventsProvider.getFeedingDetails(widget.event!.id);
+        if (_existingDetails != null) {
+          print(
+              'DEBUG: Loaded feeding details: ${_existingDetails!.feedingType}, breastSide: ${_existingDetails!.breastSide}');
+          // Устанавливаем тип кормления
+          switch (_existingDetails!.feedingType) {
+            case FeedingType.breast:
+              _feedingMode = FeedingMode.breast;
+              if (_existingDetails!.breastSide != null) {
+                _breastSide = _existingDetails!.breastSide!;
+              }
+              break;
+            case FeedingType.bottle:
+              _feedingMode = FeedingMode.bottle;
+              if (_existingDetails!.bottleAmountMl != null) {
+                _amountController.text =
+                    _existingDetails!.bottleAmountMl!.toString();
+              }
+              break;
+            case FeedingType.solid:
+              _feedingMode = FeedingMode.solid;
+              break;
+          }
+        } else {
+          print('DEBUG: No feeding details found in Firestore');
+        }
+
+        // Запускаем таймер
+        _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          if (!_isPaused) {
+            setState(() {
+              if (_isLeftActive) {
+                _leftSeconds++;
+              } else if (_isRightActive) {
+                _rightSeconds++;
+              }
+            });
+          }
+
+          // Сохраняем состояние каждые 5 секунд
+          if ((_leftSeconds + _rightSeconds) % 5 == 0) {
+            _timerStorage.saveFeedingTimerState(
+              eventId: _activeEventId!,
+              startTime: _startTime,
+              leftSeconds: _leftSeconds,
+              rightSeconds: _rightSeconds,
+              isLeftActive: _isLeftActive,
+              isRightActive: _isRightActive,
+            );
+          }
+        });
       }
       if (widget.event!.notes != null) {
         _notesController.text = widget.event!.notes!;
       }
 
-      // Загружаем детали кормления
-      final eventsProvider =
-          Provider.of<EventsProvider>(context, listen: false);
-      _existingDetails =
-          await eventsProvider.getFeedingDetails(widget.event!.id);
-      if (_existingDetails != null) {
-        // Устанавливаем тип кормления
-        switch (_existingDetails!.feedingType) {
-          case FeedingType.breast:
-            _feedingMode = FeedingMode.breast;
-            if (_existingDetails!.breastSide != null) {
-              _breastSide = _existingDetails!.breastSide!;
+      // Для завершенных событий загружаем детали отдельно
+      if (widget.event!.endedAt != null && _existingDetails == null) {
+        _existingDetails =
+            await eventsProvider.getFeedingDetails(widget.event!.id);
+        if (_existingDetails != null) {
+          // Устанавливаем тип кормления
+          switch (_existingDetails!.feedingType) {
+            case FeedingType.breast:
+              _feedingMode = FeedingMode.breast;
+              if (_existingDetails!.breastSide != null) {
+                _breastSide = _existingDetails!.breastSide!;
+              }
+              break;
+            case FeedingType.bottle:
+              _feedingMode = FeedingMode.bottle;
+              if (_existingDetails!.bottleAmountMl != null) {
+                _amountController.text =
+                    _existingDetails!.bottleAmountMl!.toString();
+              }
+              break;
+            case FeedingType.solid:
+              _feedingMode = FeedingMode.solid;
+              break;
+          }
+        }
+      }
+    } else {
+      // Проверяем, есть ли активное событие кормления
+      final baby = babyProvider.currentBaby;
+      if (baby != null) {
+        final activeEvent = await eventsProvider.getActiveFeedingEvent(baby.id);
+        if (activeEvent != null) {
+          // Есть активное событие - показываем его
+          _isManualMode = false; // Переключаем в режим таймера
+          _startTime = activeEvent.startedAt;
+          _isTimerRunning = true;
+          _activeEventId = activeEvent.id;
+          final diff = DateTime.now().difference(activeEvent.startedAt);
+          final totalSeconds = diff.inSeconds;
+
+          if (activeEvent.notes != null) {
+            _notesController.text = activeEvent.notes!;
+          }
+
+          // Пытаемся загрузить состояние из TimerStorage
+          final timerState = await _timerStorage.getTimerState();
+          bool hasTimerState =
+              timerState != null && timerState['eventId'] == activeEvent.id;
+
+          print('DEBUG: Loading active event ${activeEvent.id}');
+          print('DEBUG: TimerStorage state: $timerState');
+          print('DEBUG: Has timer state: $hasTimerState');
+
+          // Приоритет: сначала восстанавливаем из TimerStorage (самое актуальное)
+          if (hasTimerState) {
+            _leftSeconds = timerState['leftSeconds'] ?? 0;
+            _rightSeconds = timerState['rightSeconds'] ?? 0;
+            _isLeftActive = timerState['isLeftActive'] ?? false;
+            _isRightActive = timerState['isRightActive'] ?? false;
+            print(
+                'DEBUG: Restored from TimerStorage - Left: $_leftSeconds ($_isLeftActive), Right: $_rightSeconds ($_isRightActive)');
+
+            // Обновляем UI сразу
+            setState(() {});
+          } else {
+            // Если нет TimerStorage, используем totalSeconds
+            _isLeftActive = true;
+            _isRightActive = false;
+            _leftSeconds = totalSeconds;
+            print('DEBUG: No TimerStorage, using totalSeconds: $totalSeconds');
+          }
+
+          // Загружаем детали кормления для дополнительной информации
+          final feedingDetails =
+              await eventsProvider.getFeedingDetails(activeEvent.id);
+          if (feedingDetails != null &&
+              feedingDetails.feedingType == FeedingType.breast) {
+            print(
+                'DEBUG: Loaded feeding details, breastSide: ${feedingDetails.breastSide}');
+          } else {
+            print('DEBUG: No feeding details found or not breast feeding');
+          }
+
+          _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+            if (!_isPaused) {
+              setState(() {
+                if (_isLeftActive) {
+                  _leftSeconds++;
+                } else if (_isRightActive) {
+                  _rightSeconds++;
+                }
+              });
             }
-            break;
-          case FeedingType.bottle:
-            _feedingMode = FeedingMode.bottle;
-            if (_existingDetails!.bottleAmountMl != null) {
-              _amountController.text =
-                  _existingDetails!.bottleAmountMl!.toString();
+
+            // Сохраняем состояние каждые 5 секунд
+            if ((_leftSeconds + _rightSeconds) % 5 == 0) {
+              _timerStorage.saveFeedingTimerState(
+                eventId: _activeEventId!,
+                startTime: _startTime,
+                leftSeconds: _leftSeconds,
+                rightSeconds: _rightSeconds,
+                isLeftActive: _isLeftActive,
+                isRightActive: _isRightActive,
+              );
             }
-            break;
-          case FeedingType.solid:
-            _feedingMode = FeedingMode.solid;
-            break;
+          });
         }
       }
     }
@@ -99,6 +285,11 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
   Future<void> _saveToFirestore() async {
     if (_isSaving) return;
+
+    // Если есть активное событие, завершаем его
+    if (_activeEventId != null && _isTimerRunning) {
+      await _finishFeeding();
+    }
 
     // Валидация
     if (_feedingMode == FeedingMode.bottle) {
@@ -251,39 +442,232 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
     }
   }
 
-  void _startTimer() {
-    setState(() {
-      _isTimerRunning = true;
-    });
+  Future<void> _createActiveEvent() async {
+    if (_activeEventId != null) return; // Уже создано
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_isTimingLeft) {
-          _leftSeconds++;
-        } else {
-          _rightSeconds++;
-        }
-      });
+    final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
+    final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final baby = babyProvider.currentBaby;
+
+    if (baby == null || authProvider.currentUser == null) return;
+
+    // Определяем тип кормления
+    FeedingType feedingType;
+    switch (_feedingMode) {
+      case FeedingMode.breast:
+        feedingType = FeedingType.breast;
+        break;
+      case FeedingMode.bottle:
+        feedingType = FeedingType.bottle;
+        break;
+      case FeedingMode.solid:
+        feedingType = FeedingType.solid;
+        break;
+    }
+
+    final now = DateTime.now();
+
+    // Создаем активное событие в базе данных
+    final eventId = await eventsProvider.startFeedingEvent(
+      babyId: baby.id,
+      familyId: baby.familyId,
+      startedAt: now,
+      createdBy: authProvider.currentUser!.uid,
+      createdByName: authProvider.currentUser!.displayName ?? 'Пользователь',
+      feedingType: feedingType,
+      notes: _notesController.text.isEmpty ? null : _notesController.text,
+    );
+
+    setState(() {
+      _activeEventId = eventId;
+      _startTime = now;
     });
   }
 
-  void _stopTimer() {
+  Future<void> _finishFeeding() async {
     _timer?.cancel();
+
+    if (_activeEventId != null) {
+      final eventsProvider =
+          Provider.of<EventsProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Завершаем событие кормления
+      await eventsProvider.stopFeedingEvent(
+        eventId: _activeEventId!,
+        endedAt: DateTime.now(),
+        lastModifiedBy: authProvider.currentUser?.uid,
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+      );
+    }
+
+    // Очищаем локальное хранилище
+    await _timerStorage.clearTimerState();
+
     setState(() {
       _isTimerRunning = false;
+      _isLeftActive = false;
+      _isRightActive = false;
+      _isPaused = false;
+      _endTime = DateTime.now();
+      _activeEventId = null;
     });
   }
 
-  void _switchBreast() {
+  void _toggleBreast(bool isLeft) async {
+    print(
+        'DEBUG: Toggle breast - isLeft: $isLeft, current state - Left: $_isLeftActive ($_leftSeconds sec), Right: $_isRightActive ($_rightSeconds sec)');
+
+    if (_activeEventId == null) {
+      // Создаем активное событие, если его нет
+      await _createActiveEvent();
+    }
+
+    print('DEBUG: Before setState - isTimerRunning: $_isTimerRunning');
     setState(() {
-      _isTimingLeft = !_isTimingLeft;
+      if (isLeft) {
+        if (_isLeftActive) {
+          // Останавливаем левую грудь
+          _isLeftActive = false;
+          if (!_isRightActive) {
+            // Если правая тоже не активна, останавливаем таймер
+            _timer?.cancel();
+            _isTimerRunning = false;
+          }
+        } else {
+          // Запускаем левую грудь
+          _isLeftActive = true;
+          _isRightActive = false; // Останавливаем правую, если была активна
+          _isPaused = false;
+
+          if (!_isTimerRunning) {
+            _isTimerRunning = true;
+            _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+              setState(() {
+                if (_isLeftActive) {
+                  _leftSeconds++;
+                } else if (_isRightActive) {
+                  _rightSeconds++;
+                }
+              });
+
+              // Сохраняем состояние каждые 5 секунд
+              if ((_leftSeconds + _rightSeconds) % 5 == 0) {
+                _timerStorage.saveFeedingTimerState(
+                  eventId: _activeEventId!,
+                  startTime: _startTime,
+                  leftSeconds: _leftSeconds,
+                  rightSeconds: _rightSeconds,
+                  isLeftActive: _isLeftActive,
+                  isRightActive: _isRightActive,
+                );
+              }
+            });
+          }
+        }
+      } else {
+        if (_isRightActive) {
+          // Останавливаем правую грудь
+          _isRightActive = false;
+          if (!_isLeftActive) {
+            // Если левая тоже не активна, останавливаем таймер
+            _timer?.cancel();
+            _isTimerRunning = false;
+          }
+        } else {
+          // Запускаем правую грудь
+          _isRightActive = true;
+          _isLeftActive = false; // Останавливаем левую, если была активна
+          _isPaused = false;
+
+          if (!_isTimerRunning) {
+            _isTimerRunning = true;
+            _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+              setState(() {
+                if (_isLeftActive) {
+                  _leftSeconds++;
+                } else if (_isRightActive) {
+                  _rightSeconds++;
+                }
+              });
+
+              // Сохраняем состояние каждые 5 секунд
+              if ((_leftSeconds + _rightSeconds) % 5 == 0) {
+                _timerStorage.saveFeedingTimerState(
+                  eventId: _activeEventId!,
+                  startTime: _startTime,
+                  leftSeconds: _leftSeconds,
+                  rightSeconds: _rightSeconds,
+                  isLeftActive: _isLeftActive,
+                  isRightActive: _isRightActive,
+                );
+              }
+            });
+          }
+        }
+      }
     });
+    print('DEBUG: After setState - Left: $_isLeftActive ($_leftSeconds sec), Right: $_isRightActive ($_rightSeconds sec), isTimerRunning: $_isTimerRunning');
+
+    // Обновляем детали кормления
+    if (_activeEventId != null) {
+      BreastSide? currentSide;
+      if (_isLeftActive) {
+        currentSide = BreastSide.left;
+      } else if (_isRightActive) {
+        currentSide = BreastSide.right;
+      }
+
+      if (currentSide != null) {
+        await _updateBreastSide(currentSide);
+      } else {
+        // Если обе груди остановлены, всё равно обновляем детали
+        // Определяем какая была последней активной
+        if (_leftSeconds > _rightSeconds) {
+          await _updateBreastSide(BreastSide.left);
+        } else if (_rightSeconds > 0) {
+          await _updateBreastSide(BreastSide.right);
+        }
+      }
+
+      // Сохраняем состояние в TimerStorage сразу после переключения
+      await _timerStorage.saveFeedingTimerState(
+        eventId: _activeEventId!,
+        startTime: _startTime,
+        leftSeconds: _leftSeconds,
+        rightSeconds: _rightSeconds,
+        isLeftActive: _isLeftActive,
+        isRightActive: _isRightActive,
+      );
+      print(
+          'DEBUG: Saved to TimerStorage - EventId: $_activeEventId, Left: $_leftSeconds ($_isLeftActive), Right: $_rightSeconds ($_isRightActive)');
+    }
+  }
+
+  Future<void> _updateBreastSide(BreastSide breastSide) async {
+    if (_activeEventId == null) return;
+
+    final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
+
+    // Создаем или обновляем детали кормления
+    final feedingDetails = FeedingDetails(
+      id: _activeEventId!, // Используем eventId как id для деталей
+      eventId: _activeEventId!,
+      feedingType: FeedingType.breast,
+      breastSide: breastSide,
+      leftDurationSeconds: _leftSeconds,
+      rightDurationSeconds: _rightSeconds,
+    );
+
+    await eventsProvider.updateFeedingDetails(_activeEventId!, feedingDetails);
   }
 
   String _formatDuration(int seconds) {
-    final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
+    final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
+    final minutes = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
     final secs = (seconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$secs';
+    return '$hours:$minutes:$secs';
   }
 
   Future<void> _selectTime(BuildContext context, bool isStart) async {
@@ -312,8 +696,11 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
     }
   }
 
-  @override
   Widget build(BuildContext context) {
+    // Определяем, доступен ли режим таймера
+    final isTimerModeAvailable =
+        widget.event == null || widget.event!.endedAt == null;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -340,13 +727,14 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Переключатель режима
-            _buildModeSelector(),
-
-            const SizedBox(height: 32),
+            // Переключатель режима (только если доступен режим таймера)
+            if (isTimerModeAvailable) ...[
+              _buildModeSelector(),
+              const SizedBox(height: 32),
+            ],
 
             // Контент в зависимости от режима
-            if (_isManualMode) ...[
+            if (!isTimerModeAvailable || _isManualMode) ...[
               _buildManualMode(),
             ] else ...[
               _buildTimerMode(),
@@ -355,7 +743,8 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
             const SizedBox(height: 32),
 
             // Выбор груди (только для грудного кормления и в ручном режиме)
-            if (_feedingMode == FeedingMode.breast && _isManualMode)
+            if (_feedingMode == FeedingMode.breast &&
+                (!isTimerModeAvailable || _isManualMode))
               _buildBreastSelector(),
 
             const SizedBox(height: 32),
@@ -497,16 +886,17 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   }
 
   Widget _buildTimerMode() {
+    // Показываем режим таймера
     return Column(
       children: [
         // Таймеры для левой и правой груди
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _buildBreastTimer(
-                'Левая', _leftSeconds, _isTimingLeft && _isTimerRunning),
+                'Левая', _leftSeconds, _isLeftActive && !_isPaused),
+            const SizedBox(width: 16),
             _buildBreastTimer(
-                'Правая', _rightSeconds, !_isTimingLeft && _isTimerRunning),
+                'Правая', _rightSeconds, _isRightActive && !_isPaused),
           ],
         ),
 
@@ -514,55 +904,74 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
         // Кнопки управления
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            if (_isTimerRunning) ...[
-              ElevatedButton.icon(
-                onPressed: _switchBreast,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[800],
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                icon: const Icon(Icons.swap_horiz, color: Colors.white),
-                label: const Text(
-                  'Сменить',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-            ],
-            ElevatedButton.icon(
-              onPressed: _isTimerRunning ? _stopTimer : _startTimer,
+            // Кнопка левой груди
+            ElevatedButton(
+              onPressed: () => _toggleBreast(true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
+                backgroundColor:
+                    _isLeftActive ? const Color(0xFF10B981) : Colors.grey[800],
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+                  horizontal: 24,
+                  vertical: 14,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(25),
                 ),
               ),
-              icon: Icon(
-                _isTimerRunning ? Icons.stop : Icons.play_arrow,
-                color: Colors.white,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _isLeftActive ? Icons.pause : Icons.timer,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isLeftActive ? 'Пауза' : 'Левая',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              label: Text(
-                _isTimerRunning ? 'Завершить' : 'Начать',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+            ),
+            // Кнопка правой груди
+            ElevatedButton(
+              onPressed: () => _toggleBreast(false),
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    _isRightActive ? const Color(0xFF10B981) : Colors.grey[800],
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
                 ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _isRightActive ? Icons.pause : Icons.timer,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isRightActive ? 'Пауза' : 'Правая',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -572,39 +981,42 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   }
 
   Widget _buildBreastTimer(String label, int seconds, bool isActive) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? const Color(0xFF10B981) : Colors.white60,
-            fontSize: 16,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: isActive
-                ? const Color(0xFF10B981).withOpacity(0.2)
-                : Colors.grey[900],
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isActive ? const Color(0xFF10B981) : Colors.grey[800]!,
-              width: 2,
-            ),
-          ),
-          child: Text(
-            _formatDuration(seconds),
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
             style: TextStyle(
-              color: isActive ? const Color(0xFF10B981) : Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
+              color: isActive ? const Color(0xFF10B981) : Colors.white60,
+              fontSize: 16,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? const Color(0xFF10B981).withOpacity(0.2)
+                  : Colors.grey[900],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isActive ? const Color(0xFF10B981) : Colors.grey[800]!,
+                width: 2,
+              ),
+            ),
+            child: Text(
+              _formatDuration(seconds),
+              style: TextStyle(
+                color: isActive ? const Color(0xFF10B981) : Colors.white60,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

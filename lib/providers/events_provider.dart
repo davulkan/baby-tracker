@@ -5,6 +5,7 @@ import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/models/sleep_details.dart';
 import 'package:baby_tracker/models/diaper_details.dart';
+import 'package:baby_tracker/models/bottle_event.dart';
 
 class EventsProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -430,6 +431,333 @@ class EventsProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('Error getting statistics: $e');
       return {};
+    }
+  }
+
+  // Добавление события бутылки
+  Future<String?> addBottleEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime startedAt,
+    required BottleType bottleType,
+    required double volumeMl,
+    String? notes,
+    required String createdBy,
+    required String createdByName,
+  }) async {
+    try {
+      final eventData = {
+        'baby_id': babyId,
+        'family_id': familyId,
+        'event_type': 'bottle',
+        'started_at': Timestamp.fromDate(startedAt),
+        'notes': notes,
+        'created_at': FieldValue.serverTimestamp(),
+        'last_modified_at': FieldValue.serverTimestamp(),
+        'created_by': createdBy,
+        'created_by_name': createdByName,
+        'version': 1,
+        // Специфичные для бутылки поля
+        'bottle_type': bottleType.name,
+        'volume_ml': volumeMl,
+      };
+
+      final docRef = await _firestore.collection('events').add(eventData);
+      return docRef.id;
+    } catch (e) {
+      _error = 'Ошибка добавления события бутылки';
+      debugPrint('Error adding bottle event: $e');
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Обновление события бутылки
+  Future<bool> updateBottleEvent({
+    required String eventId,
+    DateTime? startedAt,
+    BottleType? bottleType,
+    double? volumeMl,
+    String? notes,
+    String? lastModifiedBy,
+  }) async {
+    try {
+      final updates = <String, dynamic>{
+        'last_modified_at': FieldValue.serverTimestamp(),
+      };
+
+      if (startedAt != null) {
+        updates['started_at'] = Timestamp.fromDate(startedAt);
+      }
+      if (bottleType != null) {
+        updates['bottle_type'] = bottleType.name;
+      }
+      if (volumeMl != null) {
+        updates['volume_ml'] = volumeMl;
+      }
+      if (notes != null) {
+        updates['notes'] = notes;
+      }
+      if (lastModifiedBy != null) {
+        updates['last_modified_by'] = lastModifiedBy;
+      }
+
+      await _firestore.collection('events').doc(eventId).update(updates);
+      return true;
+    } catch (e) {
+      _error = 'Ошибка обновления события бутылки';
+      debugPrint('Error updating bottle event: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Методы для управления активными событиями (таймерами)
+
+  // Запуск события сна
+  Future<String?> startSleepEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime startedAt,
+    required String createdBy,
+    required String createdByName,
+    required SleepType sleepType,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final eventData = {
+        'baby_id': babyId,
+        'family_id': familyId,
+        'event_type': 'sleep',
+        'started_at': Timestamp.fromDate(startedAt),
+        'ended_at': null, // null означает активное событие
+        'notes': notes,
+        'created_at': FieldValue.serverTimestamp(),
+        'last_modified_at': FieldValue.serverTimestamp(),
+        'created_by': createdBy,
+        'created_by_name': createdByName,
+        'version': 1,
+        // Специфичные для сна поля
+        'sleep_type': sleepType.name,
+      };
+
+      final docRef = await _firestore.collection('events').add(eventData);
+
+      _isLoading = false;
+      notifyListeners();
+      return docRef.id;
+    } catch (e) {
+      _error = 'Ошибка запуска таймера сна';
+      debugPrint('Error starting sleep event: $e');
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Завершение события сна
+  Future<bool> stopSleepEvent({
+    required String eventId,
+    required DateTime endedAt,
+    String? lastModifiedBy,
+    String? notes,
+  }) async {
+    try {
+      final updates = <String, dynamic>{
+        'ended_at': Timestamp.fromDate(endedAt),
+        'last_modified_at': FieldValue.serverTimestamp(),
+      };
+
+      if (lastModifiedBy != null) {
+        updates['last_modified_by'] = lastModifiedBy;
+      }
+      if (notes != null) {
+        updates['notes'] = notes;
+      }
+
+      await _firestore.collection('events').doc(eventId).update(updates);
+      return true;
+    } catch (e) {
+      _error = 'Ошибка завершения таймера сна';
+      debugPrint('Error stopping sleep event: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Обновление состояния таймера для события
+  Future<bool> updateTimerState({
+    required String eventId,
+    bool? isTimerActive,
+    bool? isLeftTimerActive,
+    bool? isRightTimerActive,
+    int? timerMs,
+    int? leftTimerMs,
+    int? rightTimerMs,
+  }) async {
+    try {
+      final updates = <String, dynamic>{
+        'last_modified_at': FieldValue.serverTimestamp(),
+      };
+
+      if (isTimerActive != null) updates['is_timer_active'] = isTimerActive;
+      if (isLeftTimerActive != null)
+        updates['is_left_timer_active'] = isLeftTimerActive;
+      if (isRightTimerActive != null)
+        updates['is_right_timer_active'] = isRightTimerActive;
+      if (timerMs != null) updates['timer_ms'] = timerMs;
+      if (leftTimerMs != null) updates['left_timer_ms'] = leftTimerMs;
+      if (rightTimerMs != null) updates['right_timer_ms'] = rightTimerMs;
+
+      await _firestore.collection('events').doc(eventId).update(updates);
+      return true;
+    } catch (e) {
+      _error = 'Ошибка обновления состояния таймера';
+      debugPrint('Error updating timer state: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Запуск события кормления
+  Future<String?> startFeedingEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime startedAt,
+    required String createdBy,
+    required String createdByName,
+    required FeedingType feedingType,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final eventData = {
+        'baby_id': babyId,
+        'family_id': familyId,
+        'event_type': 'feeding',
+        'started_at': Timestamp.fromDate(startedAt),
+        'ended_at': null, // null означает активное событие
+        'notes': notes,
+        'created_at': FieldValue.serverTimestamp(),
+        'last_modified_at': FieldValue.serverTimestamp(),
+        'created_by': createdBy,
+        'created_by_name': createdByName,
+        'version': 1,
+        // Специфичные для кормления поля
+        'feeding_type': feedingType.name,
+      };
+
+      final docRef = await _firestore.collection('events').add(eventData);
+
+      _isLoading = false;
+      notifyListeners();
+      return docRef.id;
+    } catch (e) {
+      _error = 'Ошибка запуска таймера кормления';
+      debugPrint('Error starting feeding event: $e');
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Завершение события кормления
+  Future<bool> stopFeedingEvent({
+    required String eventId,
+    required DateTime endedAt,
+    String? lastModifiedBy,
+    String? notes,
+  }) async {
+    try {
+      final updates = <String, dynamic>{
+        'ended_at': Timestamp.fromDate(endedAt),
+        'last_modified_at': FieldValue.serverTimestamp(),
+      };
+
+      if (lastModifiedBy != null) {
+        updates['last_modified_by'] = lastModifiedBy;
+      }
+      if (notes != null) {
+        updates['notes'] = notes;
+      }
+
+      await _firestore.collection('events').doc(eventId).update(updates);
+      return true;
+    } catch (e) {
+      _error = 'Ошибка завершения таймера кормления';
+      debugPrint('Error stopping feeding event: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Получение активных событий (с null endedAt)
+  Stream<List<Event>> getActiveEventsStream(String babyId) {
+    return _firestore
+        .collection('events')
+        .where('babyId', isEqualTo: babyId)
+        .where('endedAt', isNull: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    });
+  }
+
+  Future<Event?> getActiveSleepEvent(String babyId) async {
+    final snapshot = await _firestore
+        .collection('events')
+        .where('babyId', isEqualTo: babyId)
+        .where('type', isEqualTo: EventType.sleep.index)
+        .where('endedAt', isNull: true)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) {
+      return null;
+    }
+
+    return Event.fromFirestore(snapshot.docs.first);
+  }
+
+  Future<Event?> getActiveFeedingEvent(String babyId) async {
+    final snapshot = await _firestore
+        .collection('events')
+        .where('babyId', isEqualTo: babyId)
+        .where('type', isEqualTo: EventType.feeding.index)
+        .where('endedAt', isNull: true)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) {
+      return null;
+    }
+
+    return Event.fromFirestore(snapshot.docs.first);
+  }
+
+  // Проверка наличия активного события определенного типа
+  Future<Event?> getActiveEvent(String babyId, EventType eventType) async {
+    try {
+      final snapshot = await _firestore
+          .collection('events')
+          .where('baby_id', isEqualTo: babyId)
+          .where('event_type', isEqualTo: eventType.name)
+          .where('ended_at', isNull: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        return Event.fromFirestore(snapshot.docs.first);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting active event: $e');
+      return null;
     }
   }
 

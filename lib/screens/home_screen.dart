@@ -1,24 +1,26 @@
 // lib/screens/home_screen_full.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:baby_tracker/providers/auth_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/models/event.dart';
-import 'package:baby_tracker/models/baby.dart';
+import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/screens/add_sleep_screen.dart';
 import 'package:baby_tracker/screens/add_feeding_screen.dart';
 import 'package:baby_tracker/screens/add_diaper_screen.dart';
+import 'package:baby_tracker/screens/add_bottle_screen.dart';
 import 'package:baby_tracker/screens/stats_screen.dart';
 import 'package:baby_tracker/screens/settings_screen.dart';
+import 'package:baby_tracker/screens/baby_profile_screen.dart';
+import 'package:baby_tracker/services/timer_storage_service.dart';
 
 class HomeScreenFull extends StatelessWidget {
   const HomeScreenFull({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -172,7 +174,12 @@ class HomeScreenFull extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () {
-                      // TODO: Открыть экран добавления ребенка
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const BabyProfileScreen(),
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.add_circle_outline),
                     color: const Color(0xFF6366F1),
@@ -301,77 +308,6 @@ class HomeScreenFull extends StatelessWidget {
     );
   }
 
-  String _getAgeText(Baby baby) {
-    final days = baby.ageInDays;
-    if (days == 0) {
-      return 'Сегодня родился!';
-    } else if (days < 30) {
-      return '$days ${_getDaysWord(days)}';
-    } else if (days < 365) {
-      final months = baby.ageInMonths;
-      return '$months ${_getMonthsWord(months)}';
-    } else {
-      final years = days ~/ 365;
-      return '$years ${_getYearsWord(years)}';
-    }
-  }
-
-  String _getDaysWord(int days) {
-    if (days % 10 == 1 && days % 100 != 11) {
-      return 'день';
-    } else if ([2, 3, 4].contains(days % 10) &&
-        ![12, 13, 14].contains(days % 100)) {
-      return 'дня';
-    } else {
-      return 'дней';
-    }
-  }
-
-  String _getMonthsWord(int months) {
-    if (months % 10 == 1 && months % 100 != 11) {
-      return 'месяц';
-    } else if ([2, 3, 4].contains(months % 10) &&
-        ![12, 13, 14].contains(months % 100)) {
-      return 'месяца';
-    } else {
-      return 'месяцев';
-    }
-  }
-
-  String _getYearsWord(int years) {
-    if (years % 10 == 1 && years % 100 != 11) {
-      return 'год';
-    } else if ([2, 3, 4].contains(years % 10) &&
-        ![12, 13, 14].contains(years % 100)) {
-      return 'года';
-    } else {
-      return 'лет';
-    }
-  }
-
-  Widget _buildStatItem(String value, String label) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildQuickActions(BuildContext context) {
     return Consumer2<BabyProvider, EventsProvider>(
       builder: (context, babyProvider, eventsProvider, child) {
@@ -393,6 +329,8 @@ class HomeScreenFull extends StatelessWidget {
                 events.where((e) => e.eventType == EventType.feeding).length;
             final diaperCount =
                 events.where((e) => e.eventType == EventType.diaper).length;
+            final bottleCount =
+                events.where((e) => e.eventType == EventType.bottle).length;
 
             // Находим последние события
             final lastSleep =
@@ -403,11 +341,15 @@ class HomeScreenFull extends StatelessWidget {
             final lastDiaper = events
                 .where((e) => e.eventType == EventType.diaper)
                 .firstOrNull;
+            final lastBottle = events
+                .where((e) => e.eventType == EventType.bottle)
+                .firstOrNull;
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return SizedBox(
+              height: 120,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 children: [
                   _buildQuickActionButton(
                     context,
@@ -424,10 +366,11 @@ class HomeScreenFull extends StatelessWidget {
                       );
                     },
                   ),
+                  const SizedBox(width: 12),
                   _buildQuickActionButton(
                     context,
                     icon: Icons.child_care,
-                    label: 'Кормление...',
+                    label: 'Кормление',
                     sublabel: _getTimeSinceLabel(lastFeeding),
                     count: feedingCount.toString(),
                     color: const Color(0xFF10B981),
@@ -439,6 +382,23 @@ class HomeScreenFull extends StatelessWidget {
                       );
                     },
                   ),
+                  const SizedBox(width: 12),
+                  _buildQuickActionButton(
+                    context,
+                    icon: Icons.local_drink,
+                    label: 'Бутылка',
+                    sublabel: _getTimeSinceLabel(lastBottle),
+                    count: bottleCount.toString(),
+                    color: const Color(0xFFEC4899),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AddBottleScreen()),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 12),
                   _buildQuickActionButton(
                     context,
                     icon: Icons.auto_awesome,
@@ -454,6 +414,7 @@ class HomeScreenFull extends StatelessWidget {
                       );
                     },
                   ),
+                  const SizedBox(width: 24), // Отступ в конце для красоты
                 ],
               ),
             );
@@ -756,6 +717,14 @@ class HomeScreenFull extends StatelessWidget {
                 ),
               );
               break;
+            case EventType.bottle:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddBottleScreen(event: event),
+                ),
+              );
+              break;
             default:
               // Для других типов событий (например, health) можно добавить позже
               break;
@@ -767,6 +736,11 @@ class HomeScreenFull extends StatelessWidget {
   }
 
   Widget _buildEventItemFromEvent(Event event) {
+    // Для кормления используем специальный виджет с деталями
+    if (event.eventType == EventType.feeding) {
+      return _buildFeedingEventItem(event);
+    }
+
     IconData icon;
     String title;
     String subtitle;
@@ -785,10 +759,8 @@ class HomeScreenFull extends StatelessWidget {
               '${_formatTime(event.startedAt)} - ${_formatTime(event.endedAt!)}';
         } else {
           subtitle = '${_formatTime(event.startedAt)} - Сейчас';
-          final now = DateTime.now();
-          final dur = now.difference(event.startedAt);
-          duration =
-              '${dur.inHours.toString().padLeft(2, '0')}:${(dur.inMinutes % 60).toString().padLeft(2, '0')}:${(dur.inSeconds % 60).toString().padLeft(2, '0')}';
+          // Для активных событий duration будет обновляться в виджете
+          duration = null;
         }
         break;
 
@@ -801,6 +773,7 @@ class HomeScreenFull extends StatelessWidget {
           subtitle = '${_formatTime(event.startedAt)}, ${dur.inMinutes} мин';
         } else {
           subtitle = '${_formatTime(event.startedAt)} - Сейчас';
+          // Для активных событий duration будет обновляться в виджете
         }
         break;
 
@@ -808,6 +781,13 @@ class HomeScreenFull extends StatelessWidget {
         icon = Icons.auto_awesome;
         title = 'Подгузник';
         color = const Color(0xFFF59E0B);
+        subtitle = _formatTime(event.startedAt);
+        break;
+
+      case EventType.bottle:
+        icon = Icons.local_drink;
+        title = 'Бутылка';
+        color = const Color(0xFFEC4899);
         subtitle = _formatTime(event.startedAt);
         break;
 
@@ -819,6 +799,7 @@ class HomeScreenFull extends StatelessWidget {
     }
 
     return _buildEventItem(
+      event: event,
       icon: icon,
       title: title,
       subtitle: subtitle,
@@ -827,11 +808,110 @@ class HomeScreenFull extends StatelessWidget {
     );
   }
 
+  Widget _buildFeedingEventItem(Event event) {
+    return Consumer<EventsProvider>(
+      builder: (context, eventsProvider, child) {
+        return FutureBuilder<FeedingDetails?>(
+          future: eventsProvider.getFeedingDetails(event.id),
+          builder: (context, snapshot) {
+            String breastInfo = '';
+            if (snapshot.hasData && snapshot.data != null) {
+              final details = snapshot.data!;
+              if (details.feedingType == FeedingType.breast &&
+                  details.breastSide != null) {
+                breastInfo = details.breastSide == BreastSide.left
+                    ? 'Левая грудь'
+                    : 'Правая грудь';
+              }
+            }
+
+            String title = 'Кормление грудью';
+            String subtitle;
+
+            if (event.endedAt != null) {
+              final dur = event.duration!;
+              subtitle =
+                  '${_formatTime(event.startedAt)}, ${dur.inMinutes} мин';
+            } else {
+              subtitle = '${_formatTime(event.startedAt)} - Сейчас';
+            }
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.child_care,
+                      color: Color(0xFF10B981),
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (breastInfo.isNotEmpty)
+                          Text(
+                            breastInfo,
+                            style: const TextStyle(
+                              color: Color(0xFF10B981),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            color: Colors.white60,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Показываем таймер только для активных событий
+                  if (event.endedAt == null) ...[
+                    const SizedBox(width: 8),
+                    _LiveTimerWidget(
+                      event: event,
+                      color: const Color(0xFF10B981),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   String _formatTime(DateTime time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _buildEventItem({
+    Event? event,
     required IconData icon,
     required String title,
     required String subtitle,
@@ -884,21 +964,31 @@ class HomeScreenFull extends StatelessWidget {
               ],
             ),
           ),
-          if (duration != null)
+          if (duration != null ||
+              (event != null &&
+                  event.endedAt == null &&
+                  (event.eventType == EventType.sleep)))
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(
-                duration,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: event != null &&
+                      event.endedAt == null &&
+                      event.eventType == EventType.sleep
+                  ? _LiveTimerWidget(
+                      event: event,
+                      color: color,
+                    )
+                  : Text(
+                      duration!,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
         ],
       ),
@@ -950,6 +1040,20 @@ class HomeScreenFull extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AddFeedingScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildAddEventButton(
+              context,
+              icon: Icons.local_drink,
+              label: 'Бутылка',
+              color: const Color(0xFFEC4899),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddBottleScreen()),
                 );
               },
             ),
@@ -1014,6 +1118,134 @@ class HomeScreenFull extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// Виджет для отображения живого таймера
+class _LiveTimerWidget extends StatefulWidget {
+  final Event event;
+  final Color color;
+
+  const _LiveTimerWidget({
+    required this.event,
+    required this.color,
+  });
+
+  @override
+  State<_LiveTimerWidget> createState() => _LiveTimerWidgetState();
+}
+
+class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
+  late Stream<String> _timerStream;
+  late StreamSubscription<DocumentSnapshot>? _eventSubscription;
+  Event? _currentEvent;
+  final _timerStorage = TimerStorageService();
+
+  @override
+  void initState() {
+    super.initState();
+    _currentEvent = widget.event;
+
+    // Подписываемся на обновления события в реальном времени
+    _eventSubscription = FirebaseFirestore.instance
+        .collection('events')
+        .doc(widget.event.id)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists && mounted) {
+        final updatedEvent = Event.fromFirestore(snapshot);
+        print('DEBUG LiveTimer: Event ${widget.event.id} updated - endedAt: ${updatedEvent.endedAt}');
+        setState(() {
+          _currentEvent = updatedEvent;
+        });
+      }
+    });
+
+    _timerStream = Stream.periodic(const Duration(seconds: 1), (i) => i)
+        .asyncMap((_) => _formatTimerDisplay());
+  }
+
+  @override
+  void dispose() {
+    _eventSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<String> _formatTimerDisplay() async {
+    final currentEvent = _currentEvent ?? widget.event;
+
+    // Если событие завершено - не показываем
+    if (currentEvent.endedAt != null) {
+      print('DEBUG LiveTimer: Event ${currentEvent.id} ended, hiding timer');
+      return '';
+    }
+
+    // Для кормления используем данные из TimerStorage
+    if (currentEvent.eventType == EventType.feeding) {
+      final timerState = await _timerStorage.getTimerState();
+      if (timerState != null && timerState['eventId'] == currentEvent.id) {
+        final isLeftActive = timerState['isLeftActive'] ?? false;
+        final isRightActive = timerState['isRightActive'] ?? false;
+        
+        if (!isLeftActive && !isRightActive) {
+          print('DEBUG LiveTimer: Event ${currentEvent.id} - both breasts paused, hiding timer');
+          return '';
+        }
+
+        // Используем сумму leftSeconds + rightSeconds из TimerStorage
+        final leftSeconds = timerState['leftSeconds'] ?? 0;
+        final rightSeconds = timerState['rightSeconds'] ?? 0;
+        final totalSeconds = leftSeconds + rightSeconds;
+        
+        print('DEBUG LiveTimer: Event ${currentEvent.id} - from TimerStorage: Left=$leftSeconds, Right=$rightSeconds, Total=$totalSeconds');
+        return _formatDuration(totalSeconds);
+      }
+    }
+
+    // Для других типов событий (сон) используем разницу времени
+    final now = DateTime.now();
+    final diff = now.difference(currentEvent.startedAt);
+    final totalSeconds = diff.inSeconds;
+
+    print('DEBUG LiveTimer: Event ${currentEvent.id} - showing ${_formatDuration(totalSeconds)}');
+    return _formatDuration(totalSeconds);
+  }
+
+  String _formatDuration(int seconds) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    final secs = seconds % 60;
+
+    if (hours > 0) {
+      return '${hours}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+    } else {
+      return '${minutes}:${secs.toString().padLeft(2, '0')}';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<String>(
+      stream: _timerStream,
+      builder: (context, snapshot) {
+        final currentEvent = _currentEvent ?? widget.event;
+        final timeString = snapshot.data ?? '';
+
+        // Если таймер не активен или пустая строка - не показываем виджет
+        if (timeString.isEmpty || currentEvent.endedAt != null) {
+          return const SizedBox.shrink();
+        }
+
+        return Text(
+          timeString,
+          style: TextStyle(
+            color: widget.color,
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+      },
     );
   }
 }

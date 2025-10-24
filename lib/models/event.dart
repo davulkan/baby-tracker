@@ -5,6 +5,7 @@ enum EventType {
   feeding,
   sleep,
   diaper,
+  bottle,
   health,
   milestone,
   other,
@@ -25,6 +26,9 @@ class Event {
   final String createdByName;
   final String? lastModifiedBy;
   final int version;
+
+  // Поля для таймеров
+  // Убраны из Firestore, теперь только локально
 
   Event({
     required this.id,
@@ -58,8 +62,12 @@ class Event {
       photoUrls: data['photo_urls'] != null
           ? List<String>.from(data['photo_urls'])
           : null,
-      createdAt: (data['created_at'] as Timestamp).toDate(),
-      lastModifiedAt: (data['last_modified_at'] as Timestamp).toDate(),
+      createdAt: data['created_at'] != null
+          ? (data['created_at'] as Timestamp).toDate()
+          : DateTime.now(),
+      lastModifiedAt: data['last_modified_at'] != null
+          ? (data['last_modified_at'] as Timestamp).toDate()
+          : DateTime.now(),
       createdBy: data['created_by'] ?? '',
       createdByName: data['created_by_name'] ?? '',
       lastModifiedBy: data['last_modified_by'],
@@ -93,6 +101,8 @@ class Event {
         return EventType.sleep;
       case 'diaper':
         return EventType.diaper;
+      case 'bottle':
+        return EventType.bottle;
       case 'health':
         return EventType.health;
       case 'milestone':
@@ -107,6 +117,9 @@ class Event {
     if (endedAt == null) return null;
     return endedAt!.difference(startedAt);
   }
+
+  // Проверка, должен ли отображаться таймер в списке событий
+  // Убрана, так как таймеры теперь локально
 
   Event copyWith({
     String? id,

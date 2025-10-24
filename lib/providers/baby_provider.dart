@@ -193,6 +193,15 @@ class BabyProvider with ChangeNotifier {
     }
   }
 
+  // Очистка всех данных (при выходе из семьи)
+  void clearData() {
+    _currentBaby = null;
+    _babies = [];
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

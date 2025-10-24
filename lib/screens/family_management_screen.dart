@@ -25,7 +25,7 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
   Future<void> _loadFamilyInfo() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final familyInfo = await authProvider.getFamilyInfo();
-    
+
     setState(() {
       _familyInfo = familyInfo;
       _isLoading = false;
@@ -116,21 +116,26 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     'Семья',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 _familyInfo!['name'] ?? 'Без названия',
-                                style: Theme.of(context).textTheme.headlineSmall,
+                                style:
+                                    Theme.of(context).textTheme.headlineSmall,
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 'Создана: ${_formatDate(_familyInfo!['created_at'])}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
                               ),
                             ],
                           ),
@@ -152,7 +157,8 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     'Код приглашения',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                 ],
                               ),
@@ -166,7 +172,8 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                   border: Border.all(color: Colors.blue),
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       _familyInfo!['invite_code'] ?? '',
@@ -178,7 +185,8 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.copy, color: Colors.blue),
+                                      icon: const Icon(Icons.copy,
+                                          color: Colors.blue),
                                       onPressed: () => _copyInviteCode(
                                         _familyInfo!['invite_code'] ?? '',
                                       ),
@@ -189,9 +197,12 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 'Поделитесь этим кодом с партнером',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
                               ),
                             ],
                           ),
@@ -213,7 +224,8 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     'Участники семьи',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                 ],
                               ),
@@ -233,7 +245,8 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                         width: double.infinity,
                         child: OutlinedButton.icon(
                           onPressed: _leaveFamily,
-                          icon: const Icon(Icons.exit_to_app, color: Colors.red),
+                          icon:
+                              const Icon(Icons.exit_to_app, color: Colors.red),
                           label: const Text(
                             'Выйти из семьи',
                             style: TextStyle(color: Colors.red),
@@ -264,9 +277,8 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
             backgroundImage: member['photo_url'] != null
                 ? NetworkImage(member['photo_url'])
                 : null,
-            child: member['photo_url'] == null
-                ? const Icon(Icons.person)
-                : null,
+            child:
+                member['photo_url'] == null ? const Icon(Icons.person) : null,
           ),
           const SizedBox(width: 12),
           Expanded(
