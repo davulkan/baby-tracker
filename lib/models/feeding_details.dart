@@ -21,6 +21,8 @@ class FeedingDetails {
   final int? rightDurationSeconds;
   final FeedingActiveState activeState; // Какая грудь активна сейчас
   final DateTime? lastActivityAt; // Когда последний раз была активность
+  final BreastSide? firstBreast; // Какая грудь была первой
+  final BreastSide? secondBreast; // Какая грудь была второй
   final String? notes;
 
   FeedingDetails({
@@ -31,6 +33,8 @@ class FeedingDetails {
     this.rightDurationSeconds,
     this.activeState = FeedingActiveState.none,
     this.lastActivityAt,
+    this.firstBreast,
+    this.secondBreast,
     this.notes,
   });
 
@@ -46,6 +50,8 @@ class FeedingDetails {
       lastActivityAt: data['last_activity_at'] != null
           ? (data['last_activity_at'] as Timestamp).toDate()
           : null,
+      firstBreast: _parseBreastSide(data['first_breast']),
+      secondBreast: _parseBreastSide(data['second_breast']),
       notes: data['notes'],
     );
   }
@@ -59,6 +65,8 @@ class FeedingDetails {
       'active_state': activeState.name,
       'last_activity_at':
           lastActivityAt != null ? Timestamp.fromDate(lastActivityAt!) : null,
+      'first_breast': firstBreast?.name,
+      'second_breast': secondBreast?.name,
       'notes': notes,
     };
   }
@@ -131,6 +139,8 @@ class FeedingDetails {
     int? rightDurationSeconds,
     FeedingActiveState? activeState,
     DateTime? lastActivityAt,
+    BreastSide? firstBreast,
+    BreastSide? secondBreast,
     double? bottleAmountMl,
     double? bottleAmountOz,
     String? formulaType,
@@ -144,6 +154,8 @@ class FeedingDetails {
       rightDurationSeconds: rightDurationSeconds ?? this.rightDurationSeconds,
       activeState: activeState ?? this.activeState,
       lastActivityAt: lastActivityAt ?? this.lastActivityAt,
+      firstBreast: firstBreast ?? this.firstBreast,
+      secondBreast: secondBreast ?? this.secondBreast,
       notes: notes ?? this.notes,
     );
   }

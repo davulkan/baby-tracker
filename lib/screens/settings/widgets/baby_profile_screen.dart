@@ -1,5 +1,6 @@
 // lib/screens/baby_profile_screen.dart
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
@@ -180,22 +181,29 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
   }
 
   Widget _buildPhotoSection() {
+    final currentUser = Provider.of<AuthProvider>(context).currentUser;
+    final babyProvider = Provider.of<BabyProvider>(context);
+    final isUploading = babyProvider.isUploading;
+    final baby = babyProvider.currentBaby;
     return Center(
       child: Stack(
         children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: Colors.grey[800],
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.child_care,
-              size: 60,
-              color: Color(0xFFFF8A80),
-            ),
+          CircleAvatar(
+            radius: 60,
+            backgroundColor: Theme.of(context).primaryColorLight,
+            backgroundImage: (baby?.photoUrl != null &&
+                   baby!.photoUrl!.isNotEmpty)
+                ? NetworkImage(baby.photoUrl!)
+                : null,
+            child: (baby?.photoUrl == null ||
+                    baby?.photoUrl?.isEmpty == true)
+                ? const Icon(Icons.child_care, size: 60, color: Colors.white)
+                : null,
           ),
+          if (isUploading)
+            const Positioned.fill(
+              child: CircularProgressIndicator(),
+            ),
           Positioned(
             right: 0,
             bottom: 0,
@@ -209,12 +217,7 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
                 icon:
                     const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                 onPressed: () {
-                  // TODO: Добавить фото
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Функция добавления фото скоро появится'),
-                    ),
-                  );
+                  _showImageSourceActionSheet(context, babyProvider, currentUser!.uid);
                 },
               ),
             ),
@@ -223,7 +226,48 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
       ),
     );
   }
+void _showImageSourceActionSheet(
+      BuildContext context, BabyProvider babyProvider, String userId) {
 
+    showModalBottomSheet(
+      context: context,
+      // Делаем фон модального окна в стиле твоего приложения
+      backgroundColor: Theme.of(context).cardColor,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: Icon(Icons.photo_library,
+                    color: Theme.of(context).iconTheme.color),
+                title: Text('Галерея',
+                    style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color)),
+                onTap: () {
+                  // Вызываем метод провайдера с ImageSource.gallery
+                  babyProvider.pickAndUploadBabyImage(
+                      userId, ImageSource.gallery);
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt,
+                    color: Theme.of(context).iconTheme.color),
+                title: Text('Камера',
+                    style: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color)),
+                onTap: () {
+                  // Вызываем метод провайдера с ImageSource.camera
+                  babyProvider.pickAndUploadBabyImage(userId, ImageSource.camera);
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,

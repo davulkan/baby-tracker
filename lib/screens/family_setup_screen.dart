@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
-import 'package:baby_tracker/screens/home_screen.dart';
+import 'package:baby_tracker/screens/home/home_screen.dart';
 
 class FamilySetupScreen extends StatefulWidget {
   const FamilySetupScreen({super.key});

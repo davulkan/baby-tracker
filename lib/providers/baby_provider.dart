@@ -1,7 +1,11 @@
 // lib/providers/baby_provider.dart
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:baby_tracker/models/baby.dart';
+import 'package:image_picker/image_picker.dart';
 
 class BabyProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -16,7 +20,62 @@ class BabyProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasBaby => _currentBaby != null;
+  bool _isUploading = false;
+  bool get isUploading => _isUploading;
 
+  // --- НОВЫЙ МЕТОД ---
+  // (Предполагается, что у тебя есть _currentBaby и babyCollection)
+  Future<void> pickAndUploadBabyImage(String userId, ImageSource source) async {
+    if (_currentBaby == null) return;
+
+    try {
+      final ImagePicker picker = ImagePicker();
+      // 1. Выбираем фото из галереи
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        imageQuality: 85,
+      );
+
+      if (image == null) return; // Пользователь отменил выбор
+
+      _isUploading = true;
+      notifyListeners();
+
+
+      File imageFile = File(image.path);
+      String babyId = _currentBaby!.id;
+
+// 2. Создаем НОВУЮ, БЕЗОПАСНУЮ ссылку
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('users') // Новая папка
+          .child(userId) // Папка этого конкретного пользователя
+          .child('baby_avatars')
+          .child('$babyId.jpg');
+      // 3. Загружаем файл
+      UploadTask uploadTask = storageRef.putFile(imageFile);
+      TaskSnapshot snapshot = await uploadTask;
+
+      // 4. Получаем URL загруженного файла
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+    
+      // 5. Обновляем URL в документе ребенка в Firestore
+      await _firestore
+          .collection('babies')
+          .doc(babyId).update({'photo_url': downloadUrl});
+
+      // 6. Обновляем локальный объект ребенка
+      _currentBaby = _currentBaby!.copyWith(photoUrl: downloadUrl);
+      _isUploading = false;
+      notifyListeners();
+    } catch (e) {
+      _isUploading = false;
+      notifyListeners();
+      print("Ошибка при загрузке фото: $e");
+      // Здесь можно показать SnackBar с ошибкой
+    }
+  }
   // Загрузка детей семьи
   Future<void> loadBabies(String familyId) async {
     _isLoading = true;

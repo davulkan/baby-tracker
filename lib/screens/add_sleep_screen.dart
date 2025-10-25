@@ -8,6 +8,7 @@ import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/models/sleep_details.dart';
 import 'package:baby_tracker/models/event.dart';
+import 'package:baby_tracker/widgets/date_time_picker.dart';
 
 class AddSleepScreen extends StatefulWidget {
   final Event? event;
@@ -183,26 +184,14 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
   }
 
   Future<void> _selectTime(BuildContext context, bool isStart) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(isStart ? _startTime : _endTime),
-    );
-
-    if (picked != null) {
+    final selected = await showCupertinoDateTimePicker(
+        context, isStart ? _startTime : _endTime);
+    if (selected != null) {
       setState(() {
-        final now = DateTime.now();
-        final selectedDateTime = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          picked.hour,
-          picked.minute,
-        );
-
         if (isStart) {
-          _startTime = selectedDateTime;
+          _startTime = selected;
         } else {
-          _endTime = selectedDateTime;
+          _endTime = selected;
         }
       });
     }
@@ -245,18 +234,19 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
             ],
             if (!isTimerModeAvailable || _isManualMode) ...[
               _buildManualMode(),
+              const SizedBox(height: 32),
+              _buildSleepTypeSelector(),
+              const SizedBox(height: 32),
+              _buildNotesField(),
+              const SizedBox(height: 32),
+              _buildSaveButton(),
             ] else ...[
               _buildTimerMode(),
-            ],
-            const SizedBox(height: 32),
-            if (!isTimerModeAvailable || _isManualMode)
+              const SizedBox(height: 32),
               _buildSleepTypeSelector(),
-            const SizedBox(height: 32),
-            _buildNotesField(),
-            const SizedBox(height: 24),
-            _buildAddPhotoButton(),
-            const SizedBox(height: 32),
-            _buildSaveButton(),
+              const SizedBox(height: 32),
+              _buildNotesField(),
+            ],
           ],
         ),
       ),
@@ -513,29 +503,6 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildAddPhotoButton() {
-    return OutlinedButton.icon(
-      onPressed: () {
-        // TODO: Добавить фото
-      },
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.all(16),
-        side: const BorderSide(color: Color(0xFF6366F1)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      icon: const Icon(Icons.camera_alt, color: Color(0xFF6366F1)),
-      label: const Text(
-        'Добавить фото',
-        style: TextStyle(
-          color: Color(0xFF6366F1),
-          fontSize: 16,
-        ),
-      ),
     );
   }
 

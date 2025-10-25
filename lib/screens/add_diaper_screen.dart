@@ -7,6 +7,7 @@ import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/models/diaper_details.dart';
 import 'package:baby_tracker/models/event.dart';
+import 'package:baby_tracker/widgets/date_time_picker.dart';
 
 class AddDiaperScreen extends StatefulWidget {
   final Event? event;
@@ -145,21 +146,10 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
   }
 
   Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_time),
-    );
-
-    if (picked != null) {
+    final selected = await showCupertinoDateTimePicker(context, _time);
+    if (selected != null) {
       setState(() {
-        final now = DateTime.now();
-        _time = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          picked.hour,
-          picked.minute,
-        );
+        _time = selected;
       });
     }
   }
@@ -264,11 +254,6 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
             // Комментарий
             _buildNotesField(),
 
-            const SizedBox(height: 24),
-
-            // Кнопка добавить фото
-            _buildAddPhotoButton(),
-
             const SizedBox(height: 32),
 
             // Кнопка сохранить
@@ -371,29 +356,6 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildAddPhotoButton() {
-    return OutlinedButton.icon(
-      onPressed: () {
-        // TODO: Добавить фото
-      },
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.all(16),
-        side: const BorderSide(color: Color(0xFFF59E0B)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      icon: const Icon(Icons.camera_alt, color: Color(0xFFF59E0B)),
-      label: const Text(
-        'Добавить фото',
-        style: TextStyle(
-          color: Color(0xFFF59E0B),
-          fontSize: 16,
-        ),
-      ),
     );
   }
 

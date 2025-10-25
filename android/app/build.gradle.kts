@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.baby_tracker"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -25,7 +25,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.baby_tracker"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"

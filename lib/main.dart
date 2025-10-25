@@ -1,7 +1,7 @@
 // lib/main.dart
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/theme_provider.dart' as theme;
-import 'package:baby_tracker/screens/home_screen.dart';
+import 'package:baby_tracker/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';

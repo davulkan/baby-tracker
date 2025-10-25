@@ -5,8 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/theme_provider.dart' as theme;
-import 'package:baby_tracker/screens/baby_profile_screen.dart';
-import 'package:baby_tracker/screens/family_management_screen.dart';
+import 'package:baby_tracker/screens/settings/widgets/baby_profile_screen.dart';
+import 'package:baby_tracker/screens/settings/widgets/family_management_screen.dart';
+import 'package:baby_tracker/screens/settings/widgets/user_profile_widget.dart';
+import 'package:baby_tracker/screens/settings/widgets/settings_section_widget.dart';
+import 'package:baby_tracker/screens/settings/widgets/setting_item_widget.dart';
+import 'package:baby_tracker/screens/settings/widgets/logout_button_widget.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -36,17 +40,19 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         children: [
           // Профиль пользователя
-          _buildUserProfile(context, authProvider),
+          UserProfileWidget(
+            authProvider: authProvider,
+            onEditProfile: () => _showEditProfileDialog(context, authProvider),
+          ),
 
           const SizedBox(height: 32),
 
           // Секция "Ребенок"
-          _buildSectionHeader(context, 'Ребенок'),
+          SettingsSectionWidget(title: 'Ребенок'),
           Consumer<BabyProvider>(
             builder: (context, babyProvider, child) {
               final baby = babyProvider.currentBaby;
-              return _buildSettingItem(
-                context,
+              return SettingItemWidget(
                 icon: Icons.child_care,
                 title: 'Профиль ребенка',
                 subtitle: baby != null
@@ -67,13 +73,12 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Секция "Семья"
-          _buildSectionHeader(context, 'Семья'),
+          SettingsSectionWidget(title: 'Семья'),
           FutureBuilder<Map<String, dynamic>?>(
             future: authProvider.getFamilyInfo(),
             builder: (context, snapshot) {
               final familyName = snapshot.data?['name'];
-              return _buildSettingItem(
-                context,
+              return SettingItemWidget(
                 icon: Icons.family_restroom,
                 title: 'Управление семьёй',
                 subtitle: familyName != null
@@ -83,8 +88,7 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-          _buildSettingItem(
-            context,
+          SettingItemWidget(
             icon: Icons.vpn_key,
             title: 'Контроль доступа',
             subtitle: 'Права доступа и разрешения',
@@ -94,23 +98,20 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Секция "Приложение"
-          _buildSectionHeader(context, 'Приложение'),
-          _buildSettingItem(
-            context,
+          SettingsSectionWidget(title: 'Приложение'),
+          SettingItemWidget(
             icon: Icons.notifications,
             title: 'Уведомления',
             subtitle: 'Настройка оповещений',
             onTap: () => _showNotificationSettings(context),
           ),
-          _buildSettingItem(
-            context,
+          SettingItemWidget(
             icon: Icons.palette,
             title: 'Тема приложения',
             subtitle: _getThemeModeName(themeProvider.themeMode),
             onTap: () => _showThemeSettings(context, themeProvider),
           ),
-          _buildSettingItem(
-            context,
+          SettingItemWidget(
             icon: Icons.language,
             title: 'Язык',
             subtitle: 'Русский',
@@ -120,9 +121,8 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Секция "Данные"
-          _buildSectionHeader(context, 'Данные'),
-          _buildSettingItem(
-            context,
+          SettingsSectionWidget(title: 'Данные'),
+          SettingItemWidget(
             icon: Icons.backup,
             title: 'Экспорт данных',
             subtitle: 'Скачать все данные',
@@ -130,8 +130,7 @@ class SettingsScreen extends StatelessWidget {
               _exportData(context);
             },
           ),
-          _buildSettingItem(
-            context,
+          SettingItemWidget(
             icon: Icons.delete_forever,
             title: 'Удалить все данные',
             subtitle: 'Безвозвратное удаление',
@@ -144,24 +143,21 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Секция "О приложении"
-          _buildSectionHeader(context, 'О приложении'),
-          _buildSettingItem(
-            context,
+          SettingsSectionWidget(title: 'О приложении'),
+          SettingItemWidget(
             icon: Icons.info,
             title: 'Версия',
             subtitle: '1.0.0',
             onTap: () {},
           ),
-          _buildSettingItem(
-            context,
+          SettingItemWidget(
             icon: Icons.privacy_tip,
             title: 'Политика конфиденциальности',
             onTap: () {
               _showPrivacyPolicy(context);
             },
           ),
-          _buildSettingItem(
-            context,
+          SettingItemWidget(
             icon: Icons.description,
             title: 'Условия использования',
             onTap: () {
@@ -172,222 +168,49 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Кнопка выхода
-          _buildLogoutButton(context, authProvider),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserProfile(BuildContext context, AuthProvider authProvider) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: const Color(0xFF6366F1),
-            backgroundImage: authProvider.currentUser?.photoURL != null
-                ? NetworkImage(authProvider.currentUser!.photoURL!)
-                : null,
-            child: authProvider.currentUser?.photoURL == null
-                ? const Icon(Icons.person, size: 30, color: Colors.white)
-                : null,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  authProvider.currentUser?.displayName ?? 'Пользователь',
-                  style: TextStyle(
-                    color: Theme.of(context).textTheme.titleLarge?.color,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  authProvider.currentUser?.email ?? '',
-                  style: TextStyle(
-                    color: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.color
-                        ?.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.edit,
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withOpacity(0.7)),
-            onPressed: () {
-              _showEditProfileDialog(context, authProvider);
-            },
+          LogoutButtonWidget(
+            onPressed: () => _handleLogout(context, authProvider),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12, left: 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          color:
-              Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
+  void _handleLogout(BuildContext context, AuthProvider authProvider) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Выход',
+          style: TextStyle(color: Colors.white),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSettingItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    Color? textColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(12),
+        content: const Text(
+          'Вы уверены, что хотите выйти?',
+          style: TextStyle(color: Colors.white70),
         ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: textColor ?? Theme.of(context).iconTheme.color,
-              size: 24,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: textColor ??
-                          Theme.of(context).textTheme.titleMedium?.color,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.color
-                            ?.withOpacity(0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.color
-                  ?.withOpacity(0.6),
-              size: 24,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutButton(BuildContext context, AuthProvider authProvider) {
-    return ElevatedButton(
-      onPressed: () async {
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Text(
-              'Выход',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: const Text(
-              'Вы уверены, что хотите выйти?',
-              style: TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Отмена'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'Выйти',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Отмена'),
           ),
-        );
-
-        if (confirm == true && context.mounted) {
-          await authProvider.signOut();
-          if (context.mounted) {
-            Navigator.of(context).popUntil((route) => route.isFirst);
-          }
-        }
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red,
-        padding: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.logout, color: Colors.white),
-          SizedBox(width: 8),
-          Text(
-            'Выйти из аккаунта',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'Выйти',
+              style: TextStyle(color: Colors.red),
             ),
           ),
         ],
       ),
     );
+
+    if (confirm == true && context.mounted) {
+      await authProvider.signOut();
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    }
   }
 
   void _showDeleteDataDialog(BuildContext context, AuthProvider authProvider) {

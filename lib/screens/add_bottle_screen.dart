@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
+import 'package:baby_tracker/widgets/date_time_picker.dart';
 
 import 'package:baby_tracker/models/event.dart';
 
@@ -29,16 +30,13 @@ class _AddBottleScreenState extends State<AddBottleScreen> {
   void initState() {
     super.initState();
 
-    
-      final bottleEvent = widget.event;
-      if(bottleEvent != null){
+    final bottleEvent = widget.event;
+    if (bottleEvent != null) {
       _selectedTime = bottleEvent.startedAt;
       _selectedBottleType = bottleEvent.bottleType ?? BottleType.formula;
-      _volumeController.text = bottleEvent.volumeMl.toString();
+      _volumeController.text = bottleEvent.volumeMl!.round().toString();
       _notesController.text = bottleEvent.notes ?? '';
-      }
-
-    
+    }
   }
 
   @override
@@ -145,6 +143,22 @@ class _AddBottleScreenState extends State<AddBottleScreen> {
                         contentPadding: const EdgeInsets.all(20),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Быстрые кнопки объема
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildQuickVolumeButton(30),
+                      const SizedBox(width: 8),
+                      _buildQuickVolumeButton(60),
+                      const SizedBox(width: 8),
+                      _buildQuickVolumeButton(90),
+                      const SizedBox(width: 8),
+                      _buildQuickVolumeButton(120),
+                      const SizedBox(width: 8),
+                      _buildQuickVolumeButton(150),
+                    ],
                   ),
 
                   const SizedBox(height: 32),
@@ -359,31 +373,43 @@ class _AddBottleScreenState extends State<AddBottleScreen> {
     );
   }
 
-  Future<void> _selectTime() async {
-    final TimeOfDay? time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_selectedTime),
-    );
-
-    if (time != null) {
-      final DatePicker = await showDatePicker(
-        context: context,
-        initialDate: _selectedTime,
-        firstDate: DateTime.now().subtract(const Duration(days: 365)),
-        lastDate: DateTime.now(),
-      );
-
-      if (DatePicker != null) {
+  Widget _buildQuickVolumeButton(int volume) {
+    return GestureDetector(
+      onTap: () {
         setState(() {
-          _selectedTime = DateTime(
-            DatePicker.year,
-            DatePicker.month,
-            DatePicker.day,
-            time.hour,
-            time.minute,
-          );
+          _volumeController.text = volume.toString();
         });
-      }
+      },
+      child: Container(
+        width: 60,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).dividerColor,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          '$volume',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyLarge?.color,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectTime() async {
+    final selected = await showCupertinoDateTimePicker(context, _selectedTime);
+    if (selected != null) {
+      setState(() {
+        _selectedTime = selected;
+      });
     }
   }
 

@@ -8,6 +8,7 @@ import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/models/event.dart';
+import 'package:baby_tracker/widgets/date_time_picker.dart';
 
 class AddFeedingScreen extends StatefulWidget {
   final Event? event;
@@ -35,6 +36,10 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   bool _isRightActive = false;
   String? _activeEventId;
 
+  // Для отслеживания порядка груди
+  BreastSide? _firstBreast;
+  BreastSide? _secondBreast;
+
   @override
   void initState() {
     super.initState();
@@ -48,12 +53,12 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       // Загружаем данные для редактирования
       _startTime = widget.event!.startedAt;
       if (widget.event!.endedAt != null) {
-        // Завершенное событие - редактирование, таймеры недоступны
         _endTime = widget.event!.endedAt!;
-        _isManualMode = true;
-      } else {
-        // Это активное событие - включаем таймер
-        _isManualMode = false;
+      }
+
+      // Всегда можем использовать таймер, независимо от статуса события
+      if (widget.event!.endedAt == null) {
+        // Активное событие
         _activeEventId = widget.event!.id;
 
         if (widget.event!.notes != null) {
@@ -67,6 +72,8 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
           _breastSide = _existingDetails!.breastSide ?? BreastSide.left;
           _leftSeconds = _existingDetails!.leftDurationSeconds ?? 0;
           _rightSeconds = _existingDetails!.rightDurationSeconds ?? 0;
+          _firstBreast = _existingDetails!.firstBreast;
+          _secondBreast = _existingDetails!.secondBreast;
 
           // Определяем активное состояние из FeedingDetails
           _isLeftActive =
@@ -233,6 +240,8 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
     if (baby == null || authProvider.currentUser == null) return;
 
     final now = DateTime.now();
+    final isResuming = _leftSeconds > 0 ||
+        _rightSeconds > 0; // Проверяем, возобновляем ли кормление
 
     // Создаем активное событие в Firestore
     final eventId = await eventsProvider.startFeedingEvent(
@@ -245,15 +254,19 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
     );
 
     if (eventId != null) {
-      // Создаем начальный документ FeedingDetails
+      // Создаем документ FeedingDetails с сохраненным прогрессом
       final initialDetails = FeedingDetails(
         id: eventId,
         eventId: eventId,
-        breastSide: BreastSide.left,
-        leftDurationSeconds: 0,
-        rightDurationSeconds: 0,
+        breastSide: _leftSeconds > 0 && _rightSeconds > 0
+            ? BreastSide.both
+            : (_leftSeconds > 0 ? BreastSide.left : BreastSide.right),
+        leftDurationSeconds: _leftSeconds,
+        rightDurationSeconds: _rightSeconds,
         activeState: FeedingActiveState.none,
         lastActivityAt: now,
+        firstBreast: _firstBreast,
+        secondBreast: _secondBreast,
         notes: null,
       );
       await eventsProvider.updateFeedingDetails(eventId, initialDetails);
@@ -261,7 +274,9 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
     setState(() {
       _activeEventId = eventId;
-      _startTime = now;
+      if (!isResuming) {
+        _startTime = now;
+      }
     });
   }
 
@@ -286,6 +301,8 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         rightDurationSeconds: _rightSeconds,
         activeState: FeedingActiveState.none,
         lastActivityAt: now,
+        firstBreast: _firstBreast,
+        secondBreast: _secondBreast,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
       );
 
@@ -313,10 +330,9 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       final eventsProvider =
           Provider.of<EventsProvider>(context, listen: false);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
       final now = DateTime.now();
 
-      // Обновляем детали кормления с текущим состоянием
+      // Обновляем детали кормления перед завершением
       final pauseDetails = FeedingDetails(
         id: _activeEventId!,
         eventId: _activeEventId!,
@@ -325,68 +341,39 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
             : (_leftSeconds > 0 ? BreastSide.left : BreastSide.right),
         leftDurationSeconds: _leftSeconds,
         rightDurationSeconds: _rightSeconds,
-        activeState: FeedingActiveState.none, // Ставим на паузу
+        activeState: FeedingActiveState.none,
         lastActivityAt: now,
+        firstBreast: _firstBreast,
+        secondBreast: _secondBreast,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
       );
 
       await eventsProvider.updateFeedingDetails(_activeEventId!, pauseDetails);
 
-      // Делаем промежуточное сохранение - записываем endedAt для сохранения прогресса
+      // Завершаем текущее событие
       await eventsProvider.stopFeedingEvent(
         eventId: _activeEventId!,
         endedAt: now,
         lastModifiedBy: authProvider.currentUser?.uid,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
       );
-
-      // Сразу создаем новое активное событие для возможности продолжения
-      final newEventId = await eventsProvider.startFeedingEvent(
-        babyId: (Provider.of<BabyProvider>(context, listen: false)
-            .currentBaby
-            ?.id)!,
-        familyId: (Provider.of<BabyProvider>(context, listen: false)
-            .currentBaby
-            ?.familyId)!,
-        startedAt: now,
-        createdBy: authProvider.currentUser!.uid,
-        createdByName: authProvider.currentUser!.displayName ?? 'Пользователь',
-        notes: _notesController.text.isEmpty ? null : _notesController.text,
-      );
-
-      if (newEventId != null) {
-        // Создаем детали для нового события с сохраненным прогрессом
-        final continueDetails = FeedingDetails(
-          id: newEventId,
-          eventId: newEventId,
-          breastSide: _leftSeconds > 0 && _rightSeconds > 0
-              ? BreastSide.both
-              : (_leftSeconds > 0 ? BreastSide.left : BreastSide.right),
-          leftDurationSeconds: _leftSeconds,
-          rightDurationSeconds: _rightSeconds,
-          activeState: FeedingActiveState.none,
-          lastActivityAt: now,
-          notes: null,
-        );
-        await eventsProvider.updateFeedingDetails(newEventId, continueDetails);
-        _activeEventId = newEventId;
-      }
     }
 
     setState(() {
       _isLeftActive = false;
       _isRightActive = false;
+      _activeEventId = null; // Сбрасываем ID активного события
     });
   }
 
   void _toggleBreast(bool isLeft) async {
-    // Если нажали "Пауза" на активной груди - делаем промежуточное сохранение
+    // Если нажали "Пауза" на активной груди - завершаем текущее событие
     if ((isLeft && _isLeftActive) || (!isLeft && _isRightActive)) {
       await _pauseFeeding();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Кормление приостановлено и сохранено'),
+            content: Text('Кормление завершено'),
             backgroundColor: Color(0xFF10B981),
           ),
         );
@@ -405,6 +392,14 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
     final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
     final now = DateTime.now();
+    final selectedBreast = isLeft ? BreastSide.left : BreastSide.right;
+
+    // Обновляем порядок груди
+    if (_firstBreast == null) {
+      _firstBreast = selectedBreast;
+    } else if (_firstBreast != selectedBreast && _secondBreast == null) {
+      _secondBreast = selectedBreast;
+    }
 
     setState(() {
       if (isLeft) {
@@ -436,6 +431,8 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         rightDurationSeconds: _rightSeconds,
         activeState: activeState,
         lastActivityAt: now,
+        firstBreast: _firstBreast,
+        secondBreast: _secondBreast,
         notes: null,
       );
 
@@ -452,26 +449,14 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   }
 
   Future<void> _selectTime(BuildContext context, bool isStart) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(isStart ? _startTime : _endTime),
-    );
-
-    if (picked != null) {
+    final selected = await showCupertinoDateTimePicker(
+        context, isStart ? _startTime : _endTime);
+    if (selected != null) {
       setState(() {
-        final now = DateTime.now();
-        final selectedDateTime = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          picked.hour,
-          picked.minute,
-        );
-
         if (isStart) {
-          _startTime = selectedDateTime;
+          _startTime = selected;
         } else {
-          _endTime = selectedDateTime;
+          _endTime = selected;
         }
       });
     }
@@ -479,9 +464,6 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isTimerModeAvailable =
-        widget.event == null || widget.event!.endedAt == null;
-
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -508,23 +490,21 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (isTimerModeAvailable) ...[
-              _buildModeSelector(),
-              const SizedBox(height: 32),
-            ],
-            if (!isTimerModeAvailable || _isManualMode) ...[
+            _buildModeSelector(),
+            const SizedBox(height: 32),
+            if (_isManualMode) ...[
               _buildManualMode(),
+              const SizedBox(height: 32),
+              _buildBreastSelector(),
+              const SizedBox(height: 32),
+              _buildNotesField(),
+              const SizedBox(height: 32),
+              _buildSaveButton(),
             ] else ...[
               _buildTimerMode(),
+              const SizedBox(height: 32),
+              _buildNotesField(),
             ],
-            const SizedBox(height: 32),
-            if (!isTimerModeAvailable || _isManualMode) _buildBreastSelector(),
-            const SizedBox(height: 32),
-            _buildNotesField(),
-            const SizedBox(height: 24),
-            _buildAddPhotoButton(),
-            const SizedBox(height: 32),
-            _buildSaveButton(),
           ],
         ),
       ),
@@ -872,29 +852,6 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildAddPhotoButton() {
-    return OutlinedButton.icon(
-      onPressed: () {
-        // TODO: Добавить фото
-      },
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.all(16),
-        side: const BorderSide(color: Color(0xFF10B981)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      icon: const Icon(Icons.camera_alt, color: Color(0xFF10B981)),
-      label: const Text(
-        'Добавить фото',
-        style: TextStyle(
-          color: Color(0xFF10B981),
-          fontSize: 16,
-        ),
-      ),
     );
   }
 
