@@ -8,7 +8,6 @@ import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/models/event.dart';
-import 'package:baby_tracker/services/timer_storage_service.dart';
 
 class AddFeedingScreen extends StatefulWidget {
   final Event? event;
@@ -25,21 +24,16 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now();
   final _notesController = TextEditingController();
-  final _amountController = TextEditingController();
   bool _isSaving = false;
   FeedingDetails? _existingDetails;
 
   // Для таймера
-  bool _isTimerRunning = false;
   Timer? _timer;
   int _leftSeconds = 0;
   int _rightSeconds = 0;
   bool _isLeftActive = false;
   bool _isRightActive = false;
-  bool _isPaused = false;
   String? _activeEventId;
-
-  final _timerStorage = TimerStorageService();
 
   @override
   void initState() {
@@ -57,208 +51,116 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       if (widget.event!.endedAt != null) {
         // Завершенное событие - редактирование, таймеры недоступны
         _endTime = widget.event!.endedAt!;
-        _isManualMode = true; // Только ручной режим для завершенных событий
+        _isManualMode = true;
       } else {
         // Это активное событие - включаем таймер
-        _isManualMode = false; // Переключаем в режим таймера
-        _isTimerRunning = true;
+        _isManualMode = false;
         _activeEventId = widget.event!.id;
-        final diff = DateTime.now().difference(widget.event!.startedAt);
-        final totalSeconds = diff.inSeconds;
 
         if (widget.event!.notes != null) {
           _notesController.text = widget.event!.notes!;
         }
 
-        // Пытаемся загрузить состояние из TimerStorage
-        final timerState =
-            await _timerStorage.getTimerState(eventId: widget.event!.id);
-        bool hasTimerState = timerState != null;
-
-        print('DEBUG: Loading event ${widget.event!.id}');
-        print('DEBUG: TimerStorage state: $timerState');
-        print('DEBUG: Has timer state: $hasTimerState');
-
-        // Приоритет: сначала восстанавливаем из TimerStorage (самое актуальное)
-        if (hasTimerState) {
-          final savedLeftSeconds = timerState['leftSeconds'] ?? 0;
-          final savedRightSeconds = timerState['rightSeconds'] ?? 0;
-          _isLeftActive = timerState['isLeftActive'] ?? false;
-          _isRightActive = timerState['isRightActive'] ?? false;
-
-          // Рассчитываем прошедшее время с момента сохранения
-          final timeSinceSave = DateTime.now().difference(_startTime).inSeconds;
-
-          // Добавляем прошедшее время к активной груди
-          if (_isLeftActive) {
-            _leftSeconds = savedLeftSeconds + timeSinceSave;
-            _rightSeconds = savedRightSeconds;
-          } else if (_isRightActive) {
-            _rightSeconds = savedRightSeconds + timeSinceSave;
-            _leftSeconds = savedLeftSeconds;
-          } else {
-            // Обе груди на паузе - используем сохраненные значения
-            _leftSeconds = savedLeftSeconds;
-            _rightSeconds = savedRightSeconds;
-          }
-
-          print(
-              'DEBUG: Restored from TimerStorage - Left: $_leftSeconds ($_isLeftActive), Right: $_rightSeconds ($_isRightActive), timeSinceSave: $timeSinceSave');
-
-          // Обновляем UI сразу
-          setState(() {});
-        } else {
-          // Если нет TimerStorage, используем totalSeconds
-          _isLeftActive = true;
-          _isRightActive = false;
-          _leftSeconds = totalSeconds;
-          print('DEBUG: No TimerStorage, using totalSeconds: $totalSeconds');
-        }
-
-        // Загружаем детали кормления для дополнительной информации
+        // Загружаем детали кормления из Firestore
         _existingDetails =
             await eventsProvider.getFeedingDetails(widget.event!.id);
         if (_existingDetails != null) {
-          _breastSide = _existingDetails!.breastSide!;
-        } else {
-          print('DEBUG: No feeding details found in Firestore');
+          _breastSide = _existingDetails!.breastSide ?? BreastSide.left;
+          _leftSeconds = _existingDetails!.leftDurationSeconds ?? 0;
+          _rightSeconds = _existingDetails!.rightDurationSeconds ?? 0;
+
+          // Определяем активное состояние из FeedingDetails
+          _isLeftActive =
+              _existingDetails!.activeState == FeedingActiveState.left;
+          _isRightActive =
+              _existingDetails!.activeState == FeedingActiveState.right;
+
+          // Если есть активность и lastActivityAt, добавляем прошедшее время
+          if ((_isLeftActive || _isRightActive) &&
+              _existingDetails!.lastActivityAt != null) {
+            final timeSinceLast = DateTime.now()
+                .difference(_existingDetails!.lastActivityAt!)
+                .inSeconds;
+            if (_isLeftActive) {
+              _leftSeconds += timeSinceLast;
+            } else if (_isRightActive) {
+              _rightSeconds += timeSinceLast;
+            }
+          }
         }
 
-        // Запускаем таймер
-        _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (!_isPaused) {
-            setState(() {
-              if (_isLeftActive) {
-                _leftSeconds++;
-              } else if (_isRightActive) {
-                _rightSeconds++;
-              }
-            });
-          }
-
-          // Сохраняем состояние каждые 5 секунд
-          if ((_leftSeconds + _rightSeconds) % 5 == 0) {
-            _timerStorage.saveFeedingTimerState(
-              eventId: _activeEventId!,
-              startTime: _startTime,
-              leftSeconds: _leftSeconds,
-              rightSeconds: _rightSeconds,
-              isLeftActive: _isLeftActive,
-              isRightActive: _isRightActive,
-            );
-          }
-        });
+        // Запускаем таймер для обновления UI
+        _startLocalTimer();
       }
       if (widget.event!.notes != null) {
         _notesController.text = widget.event!.notes!;
-      }
-
-      // Для завершенных событий загружаем детали отдельно
-      if (widget.event!.endedAt != null && _existingDetails == null) {
-        _existingDetails =
-            await eventsProvider.getFeedingDetails(widget.event!.id);
-        if (_existingDetails != null) {
-          // Устанавливаем тип кормления
-          _breastSide = _existingDetails!.breastSide!;
-        }
       }
     } else {
       // Проверяем, есть ли активное событие кормления
       final baby = babyProvider.currentBaby;
       if (baby != null) {
-        final activeEvent = await eventsProvider.getActiveFeedingEvent(baby.id);
+        final activeEvent = await eventsProvider.getActiveEvent(
+          baby.id,
+          EventType.feeding,
+        );
         if (activeEvent != null) {
-          // Есть активное событие - показываем его
-          _isManualMode = false; // Переключаем в режим таймера
+          _isManualMode = false;
           _startTime = activeEvent.startedAt;
-          _isTimerRunning = true;
           _activeEventId = activeEvent.id;
-          final diff = DateTime.now().difference(activeEvent.startedAt);
-          final totalSeconds = diff.inSeconds;
 
           if (activeEvent.notes != null) {
             _notesController.text = activeEvent.notes!;
           }
 
-          // Пытаемся загрузить состояние из TimerStorage
-          final timerState =
-              await _timerStorage.getTimerState(eventId: activeEvent.id);
-          bool hasTimerState = timerState != null;
+          // Загружаем детали кормления из Firestore
+          _existingDetails =
+              await eventsProvider.getFeedingDetails(activeEvent.id);
+          if (_existingDetails != null) {
+            _breastSide = _existingDetails!.breastSide ?? BreastSide.left;
+            _leftSeconds = _existingDetails!.leftDurationSeconds ?? 0;
+            _rightSeconds = _existingDetails!.rightDurationSeconds ?? 0;
 
-          print('DEBUG: Loading active event ${activeEvent.id}');
-          print('DEBUG: TimerStorage state: $timerState');
-          print('DEBUG: Has timer state: $hasTimerState');
+            _isLeftActive =
+                _existingDetails!.activeState == FeedingActiveState.left;
+            _isRightActive =
+                _existingDetails!.activeState == FeedingActiveState.right;
 
-          // Приоритет: сначала восстанавливаем из TimerStorage (самое актуальное)
-          if (hasTimerState) {
-            final savedLeftSeconds = timerState['leftSeconds'] ?? 0;
-            final savedRightSeconds = timerState['rightSeconds'] ?? 0;
-            _isLeftActive = timerState['isLeftActive'] ?? false;
-            _isRightActive = timerState['isRightActive'] ?? false;
-
-            // Рассчитываем прошедшее время с момента сохранения
-            final timeSinceSave =
-                DateTime.now().difference(_startTime).inSeconds;
-
-            // Добавляем прошедшее время к активной груди
-            if (_isLeftActive) {
-              _leftSeconds = savedLeftSeconds + timeSinceSave;
-              _rightSeconds = savedRightSeconds;
-            } else if (_isRightActive) {
-              _rightSeconds = savedRightSeconds + timeSinceSave;
-              _leftSeconds = savedLeftSeconds;
-            } else {
-              // Обе груди на паузе - используем сохраненные значения
-              _leftSeconds = savedLeftSeconds;
-              _rightSeconds = savedRightSeconds;
+            // Добавляем прошедшее время с момента последней активности
+            if ((_isLeftActive || _isRightActive) &&
+                _existingDetails!.lastActivityAt != null) {
+              final timeSinceLast = DateTime.now()
+                  .difference(_existingDetails!.lastActivityAt!)
+                  .inSeconds;
+              if (_isLeftActive) {
+                _leftSeconds += timeSinceLast;
+              } else if (_isRightActive) {
+                _rightSeconds += timeSinceLast;
+              }
             }
-
-            print(
-                'DEBUG: Restored from TimerStorage - Left: $_leftSeconds ($_isLeftActive), Right: $_rightSeconds ($_isRightActive), timeSinceSave: $timeSinceSave');
-
-            // Обновляем UI сразу
-            setState(() {});
-          } else {
-            // Если нет TimerStorage, используем totalSeconds
-            _isLeftActive = true;
-            _isRightActive = false;
-            _leftSeconds = totalSeconds;
-            print('DEBUG: No TimerStorage, using totalSeconds: $totalSeconds');
           }
 
-          _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-            if (!_isPaused) {
-              setState(() {
-                if (_isLeftActive) {
-                  _leftSeconds++;
-                } else if (_isRightActive) {
-                  _rightSeconds++;
-                }
-              });
-            }
-
-            // Сохраняем состояние каждые 5 секунд
-            if ((_leftSeconds + _rightSeconds) % 5 == 0) {
-              _timerStorage.saveFeedingTimerState(
-                eventId: _activeEventId!,
-                startTime: _startTime,
-                leftSeconds: _leftSeconds,
-                rightSeconds: _rightSeconds,
-                isLeftActive: _isLeftActive,
-                isRightActive: _isRightActive,
-              );
-            }
-          });
+          _startLocalTimer();
         }
       }
     }
     setState(() {});
   }
 
+  void _startLocalTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_isLeftActive) {
+          _leftSeconds++;
+        } else if (_isRightActive) {
+          _rightSeconds++;
+        }
+      });
+    });
+  }
+
   @override
   void dispose() {
     _notesController.dispose();
-    _amountController.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -266,10 +168,7 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   Future<void> _saveToFirestore() async {
     if (_isSaving) return;
 
-    // Если есть активное событие (вне зависимости от состояния таймера), завершаем его.
-    // Раньше мы завершали только когда _isTimerRunning == true, но если пользователь
-    // поставил таймер на паузу (isTimerRunning == false) событие оставалось активным
-    // и локальное состояние не очищалось. Всегда вызываем _finishFeeding для чистоты.
+    // Если есть активное событие, завершаем его
     if (_activeEventId != null) {
       await _finishFeeding();
     }
@@ -290,8 +189,8 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       }
 
       bool success;
-      if (widget.event != null) {
-        // Обновляем существующее событие
+      if (widget.event != null && widget.event!.endedAt != null) {
+        // Обновляем существующее завершенное событие
         final updatedEvent = widget.event!.copyWith(
           startedAt: _startTime,
           endedAt: _endTime,
@@ -302,23 +201,20 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         success = await eventsProvider.updateEvent(updatedEvent);
 
         if (success) {
-          // Обновляем детали кормления
           final updatedDetails = FeedingDetails(
             id: '',
             eventId: widget.event!.id,
             breastSide: _breastSide,
             leftDurationSeconds: null,
             rightDurationSeconds: null,
- 
             notes: _notesController.text.isEmpty ? null : _notesController.text,
           );
           await eventsProvider.updateFeedingDetails(
               widget.event!.id, updatedDetails);
         }
       } else {
-        // Создаем новое событие кормления
+        // Создаем новое завершенное событие кормления
         if (_isManualMode) {
-          // Ручной режим
           final eventId = await eventsProvider.addFeedingEvent(
             babyId: baby.id,
             familyId: baby.familyId,
@@ -329,31 +225,12 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
             breastSide: _breastSide,
             leftDurationSeconds: null,
             rightDurationSeconds: null,
-            bottleAmountMl: null,
             notes: _notesController.text.isEmpty ? null : _notesController.text,
           );
           success = eventId != null;
         } else {
-          // Режим таймера
-          final now = DateTime.now();
-          final totalSeconds = _leftSeconds + _rightSeconds;
-
-          final eventId = await eventsProvider.addFeedingEvent(
-            babyId: baby.id,
-            familyId: baby.familyId,
-            startedAt: now.subtract(Duration(seconds: totalSeconds)),
-            endedAt: now,
-            createdBy: user.uid,
-            createdByName: user.displayName ?? 'Родитель',
-            breastSide: _leftSeconds > 0 && _rightSeconds > 0
-                ? BreastSide.both
-                : (_leftSeconds > 0 ? BreastSide.left : BreastSide.right),
-            leftDurationSeconds: _leftSeconds > 0 ? _leftSeconds : null,
-            rightDurationSeconds: _rightSeconds > 0 ? _rightSeconds : null,
-            bottleAmountMl: null,
-            notes: _notesController.text.isEmpty ? null : _notesController.text,
-          );
-          success = eventId != null;
+          // Режим таймера - событие уже завершено в _finishFeeding
+          success = true;
         }
       }
 
@@ -392,7 +269,7 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   }
 
   Future<void> _createActiveEvent() async {
-    if (_activeEventId != null) return; // Уже создано
+    if (_activeEventId != null) return;
 
     final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
     final babyProvider = Provider.of<BabyProvider>(context, listen: false);
@@ -403,7 +280,7 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
     final now = DateTime.now();
 
-    // Создаем активное событие в базе данных
+    // Создаем активное событие в Firestore
     final eventId = await eventsProvider.startFeedingEvent(
       babyId: baby.id,
       familyId: baby.familyId,
@@ -412,6 +289,21 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       createdByName: authProvider.currentUser!.displayName ?? 'Пользователь',
       notes: _notesController.text.isEmpty ? null : _notesController.text,
     );
+
+    if (eventId != null) {
+      // Создаем начальный документ FeedingDetails
+      final initialDetails = FeedingDetails(
+        id: eventId,
+        eventId: eventId,
+        breastSide: BreastSide.left,
+        leftDurationSeconds: 0,
+        rightDurationSeconds: 0,
+        activeState: FeedingActiveState.none,
+        lastActivityAt: now,
+        notes: null,
+      );
+      await eventsProvider.updateFeedingDetails(eventId, initialDetails);
+    }
 
     setState(() {
       _activeEventId = eventId;
@@ -427,170 +319,97 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
           Provider.of<EventsProvider>(context, listen: false);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      // Завершаем событие кормления
+      final now = DateTime.now();
+
+      // Обновляем детали кормления перед завершением
+      final finalDetails = FeedingDetails(
+        id: _activeEventId!,
+        eventId: _activeEventId!,
+        breastSide: _leftSeconds > 0 && _rightSeconds > 0
+            ? BreastSide.both
+            : (_leftSeconds > 0 ? BreastSide.left : BreastSide.right),
+        leftDurationSeconds: _leftSeconds,
+        rightDurationSeconds: _rightSeconds,
+        activeState: FeedingActiveState.none,
+        lastActivityAt: now,
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+      );
+
+      await eventsProvider.updateFeedingDetails(_activeEventId!, finalDetails);
+
+      // Завершаем событие
       await eventsProvider.stopFeedingEvent(
         eventId: _activeEventId!,
-        endedAt: DateTime.now(),
+        endedAt: now,
         lastModifiedBy: authProvider.currentUser?.uid,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
       );
     }
 
-    // Очищаем локальное хранилище
-    if (_activeEventId != null) {
-      await _timerStorage.clearTimerState(eventId: _activeEventId!);
-    }
-
     setState(() {
-      _isTimerRunning = false;
       _isLeftActive = false;
       _isRightActive = false;
-      _isPaused = false;
       _endTime = DateTime.now();
       _activeEventId = null;
     });
   }
 
   void _toggleBreast(bool isLeft) async {
-    print(
-        'DEBUG: Toggle breast - isLeft: $isLeft, current state - Left: $_isLeftActive ($_leftSeconds sec), Right: $_isRightActive ($_rightSeconds sec)');
-
     if (_activeEventId == null) {
-      // Создаем активное событие, если его нет
       await _createActiveEvent();
+      // Запускаем таймер после создания активного события
+      if (_timer == null && _activeEventId != null) {
+        _startLocalTimer();
+      }
     }
 
-    print('DEBUG: Before setState - isTimerRunning: $_isTimerRunning');
+    final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
+    final now = DateTime.now();
+
     setState(() {
       if (isLeft) {
         if (_isLeftActive) {
-          // Пауза левой груди - просто останавливаем подсчет секунд, но таймер продолжает работать
           _isLeftActive = false;
-          // Не останавливаем таймер - он продолжает обновлять ended_at
         } else {
-          // Запускаем левую грудь
           _isLeftActive = true;
-          _isRightActive = false; // Останавливаем правую, если была активна
-          _isPaused = false;
-
-          if (!_isTimerRunning) {
-            _isTimerRunning = true;
-            _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-              setState(() {
-                if (_isLeftActive) {
-                  _leftSeconds++;
-                } else if (_isRightActive) {
-                  _rightSeconds++;
-                }
-              });
-
-              // Сохраняем состояние каждые 5 секунд
-              if ((_leftSeconds + _rightSeconds) % 5 == 0) {
-                _timerStorage.saveFeedingTimerState(
-                  eventId: _activeEventId!,
-                  startTime: _startTime,
-                  leftSeconds: _leftSeconds,
-                  rightSeconds: _rightSeconds,
-                  isLeftActive: _isLeftActive,
-                  isRightActive: _isRightActive,
-                );
-              }
-            });
-          }
+          _isRightActive = false;
         }
       } else {
         if (_isRightActive) {
-          // Пауза правой груди - просто останавливаем подсчет секунд, но таймер продолжает работать
           _isRightActive = false;
-          // Не останавливаем таймер - он продолжает обновлять ended_at
         } else {
-          // Запускаем правую грудь
           _isRightActive = true;
-          _isLeftActive = false; // Останавливаем левую, если была активна
-          _isPaused = false;
-
-          if (!_isTimerRunning) {
-            _isTimerRunning = true;
-            _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-              setState(() {
-                if (_isLeftActive) {
-                  _leftSeconds++;
-                } else if (_isRightActive) {
-                  _rightSeconds++;
-                }
-              });
-
-              // Сохраняем состояние каждые 5 секунд
-              if ((_leftSeconds + _rightSeconds) % 5 == 0) {
-                _timerStorage.saveFeedingTimerState(
-                  eventId: _activeEventId!,
-                  startTime: _startTime,
-                  leftSeconds: _leftSeconds,
-                  rightSeconds: _rightSeconds,
-                  isLeftActive: _isLeftActive,
-                  isRightActive: _isRightActive,
-                );
-              }
-            });
-          }
+          _isLeftActive = false;
         }
       }
     });
-    print(
-        'DEBUG: After setState - Left: $_isLeftActive ($_leftSeconds sec), Right: $_isRightActive ($_rightSeconds sec), isTimerRunning: $_isTimerRunning');
 
-    // Обновляем детали кормления
-    if (_activeEventId != null) {
-      BreastSide? currentSide;
-      if (_isLeftActive) {
-        currentSide = BreastSide.left;
-      } else if (_isRightActive) {
-        currentSide = BreastSide.right;
-      }
-
-      if (currentSide != null) {
-        await _updateBreastSide(currentSide);
-      } else {
-        // Если обе груди остановлены, всё равно обновляем детали
-        // Определяем какая была последней активной
-        if (_leftSeconds > _rightSeconds) {
-          await _updateBreastSide(BreastSide.left);
-        } else if (_rightSeconds > 0) {
-          await _updateBreastSide(BreastSide.right);
-        }
-      }
-
-      // Сохраняем состояние в TimerStorage сразу после переключения
-      await _timerStorage.saveFeedingTimerState(
-        eventId: _activeEventId!,
-        startTime: _startTime,
-        leftSeconds: _leftSeconds,
-        rightSeconds: _rightSeconds,
-        isLeftActive: _isLeftActive,
-        isRightActive: _isRightActive,
-      );
-      print(
-          'DEBUG: Saved to TimerStorage - EventId: $_activeEventId, Left: $_leftSeconds ($_isLeftActive), Right: $_rightSeconds ($_isRightActive)');
+    // Определяем текущее активное состояние
+    FeedingActiveState activeState = FeedingActiveState.none;
+    if (_isLeftActive) {
+      activeState = FeedingActiveState.left;
+    } else if (_isRightActive) {
+      activeState = FeedingActiveState.right;
     }
-  }
 
-  Future<void> _updateBreastSide(BreastSide breastSide) async {
-    if (_activeEventId == null) return;
+    // Обновляем детали кормления в Firestore
+    if (_activeEventId != null) {
+      final updatedDetails = FeedingDetails(
+        id: _activeEventId!,
+        eventId: _activeEventId!,
+        breastSide: _leftSeconds > 0 && _rightSeconds > 0
+            ? BreastSide.both
+            : (_isLeftActive ? BreastSide.left : BreastSide.right),
+        leftDurationSeconds: _leftSeconds,
+        rightDurationSeconds: _rightSeconds,
+        activeState: activeState,
+        lastActivityAt: now,
+        notes: null,
+      );
 
-    final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
-
-    // Создаем или обновляем детали кормления
-    final feedingDetails = FeedingDetails(
-      id: _activeEventId!, // Используем eventId как id для деталей
-      eventId: _activeEventId!,
-      breastSide: breastSide,
-      leftDurationSeconds: _leftSeconds,
-      rightDurationSeconds: _rightSeconds,
-
-      notes: null,
-    );
-
-    await eventsProvider.updateFeedingDetails(_activeEventId!, feedingDetails);
+      await eventsProvider.updateFeedingDetails(
+          _activeEventId!, updatedDetails);
+    }
   }
 
   String _formatDuration(int seconds) {
@@ -628,7 +447,6 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Определяем, доступен ли режим таймера
     final isTimerModeAvailable =
         widget.event == null || widget.event!.endedAt == null;
 
@@ -658,37 +476,22 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Переключатель режима (только если доступен режим таймера)
             if (isTimerModeAvailable) ...[
               _buildModeSelector(),
               const SizedBox(height: 32),
             ],
-
-            // Контент в зависимости от режима
             if (!isTimerModeAvailable || _isManualMode) ...[
               _buildManualMode(),
             ] else ...[
               _buildTimerMode(),
             ],
-
             const SizedBox(height: 32),
-
-            // Выбор груди (только в ручном режиме)
             if (!isTimerModeAvailable || _isManualMode) _buildBreastSelector(),
-
             const SizedBox(height: 32),
-
-            // Комментарий
             _buildNotesField(),
-
             const SizedBox(height: 24),
-
-            // Кнопка добавить фото
             _buildAddPhotoButton(),
-
             const SizedBox(height: 32),
-
-            // Кнопка сохранить
             _buildSaveButton(),
           ],
         ),
@@ -815,27 +618,19 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   }
 
   Widget _buildTimerMode() {
-    // Показываем режим таймера
     return Column(
       children: [
-        // Таймеры для левой и правой груди
         Row(
           children: [
-            _buildBreastTimer(
-                'Левая', _leftSeconds, _isLeftActive && !_isPaused),
+            _buildBreastTimer('Левая', _leftSeconds, _isLeftActive),
             const SizedBox(width: 16),
-            _buildBreastTimer(
-                'Правая', _rightSeconds, _isRightActive && !_isPaused),
+            _buildBreastTimer('Правая', _rightSeconds, _isRightActive),
           ],
         ),
-
         const SizedBox(height: 32),
-
-        // Кнопки управления
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            // Кнопка левой груди
             ElevatedButton(
               onPressed: () => _toggleBreast(true),
               style: ElevatedButton.styleFrom(
@@ -869,7 +664,6 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
                 ],
               ),
             ),
-            // Кнопка правой груди
             ElevatedButton(
               onPressed: () => _toggleBreast(false),
               style: ElevatedButton.styleFrom(

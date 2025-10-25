@@ -8,7 +8,6 @@ import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/models/sleep_details.dart';
 import 'package:baby_tracker/models/event.dart';
-import 'package:baby_tracker/services/timer_storage_service.dart';
 
 class AddSleepScreen extends StatefulWidget {
   final Event? event;
@@ -30,11 +29,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
   // Для таймера
   bool _isTimerRunning = false;
   Timer? _timer;
-  int _elapsedSeconds = 0;
-  bool _isPaused = false;
   String? _activeEventId;
-
-  final _timerStorage = TimerStorageService();
 
   @override
   void initState() {
@@ -50,67 +45,19 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
       // Загружаем данные для редактирования
       _startTime = widget.event!.startedAt;
       if (widget.event!.endedAt != null) {
-        // Завершенное событие - редактирование, таймеры недоступны
+        // Завершенное событие
         _endTime = widget.event!.endedAt!;
-        _isManualMode = true; // Только ручной режим для завершенных событий
+        _isManualMode = true;
       } else {
-        // Это активное событие - проверяем локальное состояние таймера
-        final timerState =
-            await _timerStorage.getTimerState(eventId: widget.event!.id);
-        if (timerState != null && timerState['eventType'] == 'sleep') {
-          // Восстанавливаем состояние из локального хранилища
-          _startTime = timerState['startTime'];
-          final savedElapsedSeconds = timerState['elapsedSeconds'] ?? 0;
-          final wasPaused = timerState['isPaused'] ?? false;
+        // Активное событие - включаем таймер
+        _isManualMode = false;
+        _isTimerRunning = true;
+        _activeEventId = widget.event!.id;
 
-          // Рассчитываем прошедшее время с момента сохранения
-          final timeSinceSave = DateTime.now().difference(_startTime).inSeconds;
-
-          if (wasPaused) {
-            // Если был на паузе, используем сохраненные секунды без изменений
-            _elapsedSeconds = savedElapsedSeconds;
-            _isTimerRunning = false;
-            _isPaused = true;
-          } else {
-            // Если был активен, добавляем прошедшее время
-            _elapsedSeconds = savedElapsedSeconds + timeSinceSave;
-            _isTimerRunning = true;
-            _isPaused = false;
-          }
-
-          _activeEventId = timerState['eventId'];
-
-          _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-            if (!_isPaused) {
-              setState(() {
-                _elapsedSeconds++;
-              });
-            }
-
-            // Сохраняем состояние каждые 5 секунд
-            if (_elapsedSeconds % 5 == 0) {
-              _timerStorage.saveSleepTimerState(
-                eventId: _activeEventId!,
-                startTime: _startTime,
-                elapsedSeconds: _elapsedSeconds,
-                isPaused: _isPaused,
-              );
-            }
-          });
-        } else {
-          // Локального состояния нет, используем данные из события
-          _isTimerRunning = true;
-          _activeEventId = widget.event!.id;
-          final diff = DateTime.now().difference(widget.event!.startedAt);
-          _elapsedSeconds = diff.inSeconds;
-
-          _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-            setState(() {
-              _elapsedSeconds++;
-            });
-          });
-        }
+        // Запускаем локальный таймер для обновления UI
+        _startLocalTimer();
       }
+
       if (widget.event!.notes != null) {
         _notesController.text = widget.event!.notes!;
       }
@@ -121,106 +68,43 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
         _isDayMode = _existingDetails!.sleepType == SleepType.day;
       }
     } else {
-      // Проверяем локальное состояние таймера - ищем любой активный сон
-      final activeTimers = await _timerStorage.getActiveTimers();
-      final sleepTimers = <Map<String, dynamic>>[];
-      for (final eventId in activeTimers) {
-        final state = await _timerStorage.getTimerState(eventId: eventId);
-        if (state != null && state['eventType'] == 'sleep') {
-          sleepTimers.add(state);
-        }
-      }
-
-      if (sleepTimers.isNotEmpty) {
-        final timerState = sleepTimers.first; // Используем первый найденный
-        // Есть активный таймер сна
-        _activeEventId = timerState['eventId'];
-        _startTime = timerState['startTime'];
-        final savedElapsedSeconds = timerState['elapsedSeconds'] ?? 0;
-        final wasPaused = timerState['isPaused'] ?? false;
-
-        // Рассчитываем прошедшее время с момента сохранения
-        final timeSinceSave = DateTime.now().difference(_startTime).inSeconds;
-
-        if (wasPaused) {
-          // Если был на паузе, используем сохраненные секунды без изменений
-          _elapsedSeconds = savedElapsedSeconds;
-          _isTimerRunning = false;
-          _isPaused = true;
-        } else {
-          // Если был активен, добавляем прошедшее время
-          _elapsedSeconds = savedElapsedSeconds + timeSinceSave;
+      // Проверяем, есть ли активное событие сна
+      final baby = babyProvider.currentBaby;
+      if (baby != null) {
+        final activeEvent = await eventsProvider.getActiveEvent(
+          baby.id,
+          EventType.sleep,
+        );
+        if (activeEvent != null) {
+          _isManualMode = false;
+          _startTime = activeEvent.startedAt;
           _isTimerRunning = true;
-          _isPaused = false;
-        }
+          _activeEventId = activeEvent.id;
 
-        _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (!_isPaused) {
-            setState(() {
-              _elapsedSeconds++;
-            });
+          if (activeEvent.notes != null) {
+            _notesController.text = activeEvent.notes!;
           }
 
-          // Сохраняем состояние каждые 5 секунд
-          if (_elapsedSeconds % 5 == 0) {
-            _timerStorage.saveSleepTimerState(
-              eventId: _activeEventId!,
-              startTime: _startTime,
-              elapsedSeconds: _elapsedSeconds,
-              isPaused: _isPaused,
-            );
-          }
-        });
+          _startLocalTimer();
 
-        // Загружаем заметки из события
-        final activeEvent = await eventsProvider
-            .getActiveSleepEvent(babyProvider.currentBaby!.id);
-        if (activeEvent != null &&
-            activeEvent.id == _activeEventId &&
-            activeEvent.notes != null) {
-          _notesController.text = activeEvent.notes!;
-        }
-
-        // Загружаем детали сна
-        _existingDetails =
-            await eventsProvider.getSleepDetails(_activeEventId!);
-        if (_existingDetails != null) {
-          _isDayMode = _existingDetails!.sleepType == SleepType.day;
-        }
-      } else {
-        // Проверяем, есть ли активное событие сна в базе
-        final baby = babyProvider.currentBaby;
-        if (baby != null) {
-          final activeEvent = await eventsProvider.getActiveSleepEvent(baby.id);
-          if (activeEvent != null) {
-            // Есть активное событие - показываем его
-            _startTime = activeEvent.startedAt;
-            _isTimerRunning = true;
-            _activeEventId = activeEvent.id;
-            final diff = DateTime.now().difference(activeEvent.startedAt);
-            _elapsedSeconds = diff.inSeconds;
-
-            if (activeEvent.notes != null) {
-              _notesController.text = activeEvent.notes!;
-            }
-
-            _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-              setState(() {
-                _elapsedSeconds++;
-              });
-            });
-
-            // Загружаем детали сна
-            _existingDetails =
-                await eventsProvider.getSleepDetails(activeEvent.id);
-            if (_existingDetails != null) {
-              _isDayMode = _existingDetails!.sleepType == SleepType.day;
-            }
+          // Загружаем детали сна
+          _existingDetails =
+              await eventsProvider.getSleepDetails(activeEvent.id);
+          if (_existingDetails != null) {
+            _isDayMode = _existingDetails!.sleepType == SleepType.day;
           }
         }
       }
     }
     setState(() {});
+  }
+
+  void _startLocalTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        // Просто обновляем UI каждую секунду
+      });
+    });
   }
 
   @override
@@ -248,12 +132,10 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
 
     setState(() {
       _isTimerRunning = true;
-      _elapsedSeconds = 0;
       _startTime = DateTime.now();
-      _isPaused = false;
     });
 
-    // Создаем событие в базе данных
+    // Создаем событие в Firestore
     final eventId = await eventsProvider.startSleepEvent(
       babyId: baby.id,
       familyId: baby.familyId,
@@ -267,24 +149,8 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     );
 
     if (eventId != null) {
-      // Сохраняем ID события для последующего завершения
       _activeEventId = eventId;
-
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        setState(() {
-          _elapsedSeconds++;
-        });
-
-        // Сохраняем состояние каждые 5 секунд
-        if (_elapsedSeconds % 5 == 0) {
-          _timerStorage.saveSleepTimerState(
-            eventId: _activeEventId!,
-            startTime: _startTime,
-            elapsedSeconds: _elapsedSeconds,
-            isPaused: false,
-          );
-        }
-      });
+      _startLocalTimer();
     } else {
       setState(() {
         _isTimerRunning = false;
@@ -304,7 +170,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     _timer?.cancel();
     final endTime = DateTime.now();
 
-    // Завершаем событие в базе данных
+    // Завершаем событие в Firestore
     final success = await eventsProvider.stopSleepEvent(
       eventId: _activeEventId!,
       endedAt: endTime,
@@ -314,20 +180,15 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           : _notesController.text.trim(),
     );
 
-    // Очищаем локальное хранилище
-    await _timerStorage.clearTimerState();
-
     setState(() {
       _isTimerRunning = false;
       _endTime = endTime;
-      _isPaused = false;
       if (success) {
         _activeEventId = null;
       }
     });
 
     if (success) {
-      // Можем автоматически закрыть экран или показать сообщение об успехе
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Событие сна сохранено')),
       );
@@ -338,53 +199,14 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     }
   }
 
-  void _pauseTimer() {
-    setState(() {
-      _isTimerRunning = false;
-      _isPaused = true;
-    });
+  String _formatDuration() {
+    if (_activeEventId == null) return '00:00:00';
 
-    // Сохраняем состояние в TimerStorage
-    if (_activeEventId != null) {
-      _timerStorage.saveSleepTimerState(
-        eventId: _activeEventId!,
-        startTime: _startTime,
-        elapsedSeconds: _elapsedSeconds,
-        isPaused: true,
-      );
-    }
-  }
-
-  void _resumeTimer() {
-    setState(() {
-      _isTimerRunning = true;
-      _isPaused = false;
-    });
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isPaused) {
-        setState(() {
-          _elapsedSeconds++;
-        });
-      }
-
-      // Сохраняем состояние каждые 5 секунд
-      if (_elapsedSeconds % 5 == 0 && _activeEventId != null) {
-        _timerStorage.saveSleepTimerState(
-          eventId: _activeEventId!,
-          startTime: _startTime,
-          elapsedSeconds: _elapsedSeconds,
-          isPaused: false,
-        );
-      }
-    });
-  }
-
-  String _formatDuration(int seconds) {
-    final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
-    final minutes = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
-    final secs = (seconds % 60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$secs';
+    final elapsed = DateTime.now().difference(_startTime);
+    final hours = elapsed.inHours.toString().padLeft(2, '0');
+    final minutes = (elapsed.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
   }
 
   Future<void> _selectTime(BuildContext context, bool isStart) async {
@@ -415,7 +237,6 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Определяем, доступен ли режим таймера
     final isTimerModeAvailable =
         widget.event == null || widget.event!.endedAt == null;
 
@@ -445,38 +266,23 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Переключатель режима (только если доступен режим таймера)
             if (isTimerModeAvailable) ...[
               _buildModeSelector(),
               const SizedBox(height: 32),
             ],
-
-            // Контент в зависимости от режима
             if (!isTimerModeAvailable || _isManualMode) ...[
               _buildManualMode(),
             ] else ...[
               _buildTimerMode(),
             ],
-
             const SizedBox(height: 32),
-
-            // Тип сна (только в ручном режиме)
             if (!isTimerModeAvailable || _isManualMode)
               _buildSleepTypeSelector(),
-
             const SizedBox(height: 32),
-
-            // Комментарий
             _buildNotesField(),
-
             const SizedBox(height: 24),
-
-            // Кнопка добавить фото
             _buildAddPhotoButton(),
-
             const SizedBox(height: 32),
-
-            // Кнопка сохранить
             _buildSaveButton(),
           ],
         ),
@@ -603,54 +409,10 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
   }
 
   Widget _buildTimerMode() {
-    // Если редактируем активное событие, показываем таймер с кнопкой паузы
-    if (widget.event != null) {
-      return Column(
-        children: [
-          Text(
-            _formatDuration(_elapsedSeconds),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _isTimerRunning ? _pauseTimer : _resumeTimer,
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  _isTimerRunning ? Colors.orange : const Color(0xFF6366F1),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 16,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-            ),
-            icon: Icon(
-              _isTimerRunning ? Icons.pause : Icons.play_arrow,
-              color: Colors.white,
-            ),
-            label: Text(
-              _isTimerRunning ? 'Пауза' : 'Продолжить',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Обычный режим таймера для нового события
     return Column(
       children: [
         Text(
-          _formatDuration(_elapsedSeconds),
+          _formatDuration(),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 48,
@@ -857,7 +619,6 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
                     success = await eventsProvider.updateEvent(updatedEvent);
 
                     if (success) {
-                      // Обновляем детали сна
                       final updatedDetails = SleepDetails(
                         id: '',
                         eventId: widget.event!.id,

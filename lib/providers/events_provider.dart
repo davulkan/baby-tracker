@@ -76,7 +76,6 @@ class EventsProvider with ChangeNotifier {
         lastModifiedAt: DateTime.now(),
         createdBy: createdBy,
         createdByName: createdByName,
-        
       );
 
       final eventDoc =
@@ -152,7 +151,6 @@ class EventsProvider with ChangeNotifier {
         breastSide: breastSide,
         leftDurationSeconds: leftDurationSeconds,
         rightDurationSeconds: rightDurationSeconds,
-        
         notes: notes,
       );
 
@@ -270,10 +268,10 @@ class EventsProvider with ChangeNotifier {
   Future<bool> updateFeedingDetails(
       String eventId, FeedingDetails details) async {
     try {
-      await _firestore.collection('feeding_details').doc(eventId).update({
+      await _firestore.collection('feeding_details').doc(eventId).set({
         ...details.toFirestore(),
         'last_modified_at': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       notifyListeners();
       return true;

@@ -1,4 +1,4 @@
-// lib/screens/home_screen_full.dart
+// lib/screens/home_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,7 +14,6 @@ import 'package:baby_tracker/screens/add_bottle_screen.dart';
 import 'package:baby_tracker/screens/stats_screen.dart';
 import 'package:baby_tracker/screens/settings_screen.dart';
 import 'package:baby_tracker/screens/baby_profile_screen.dart';
-import 'package:baby_tracker/services/timer_storage_service.dart';
 
 class HomeScreenFull extends StatelessWidget {
   const HomeScreenFull({super.key});
@@ -26,22 +25,12 @@ class HomeScreenFull extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Верхняя панель с кнопками статистики и настроек
             _buildTopBar(context),
-
             const SizedBox(height: 16),
-
-            // Профиль ребенка (компактный)
             _buildBabyProfile(),
-
             const SizedBox(height: 16),
-
-            // 3 быстрые кнопки
             _buildQuickActions(context),
-
             const SizedBox(height: 20),
-
-            // Заголовок событий
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
               child: Row(
@@ -56,9 +45,7 @@ class HomeScreenFull extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      // TODO: Открыть журнал
-                    },
+                    onPressed: () {},
                     child: const Text(
                       'Журнал',
                       style: TextStyle(
@@ -70,10 +57,7 @@ class HomeScreenFull extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 8),
-
-            // Список событий
             Expanded(
               child: _buildEventsList(),
             ),
@@ -194,7 +178,6 @@ class HomeScreenFull extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             children: [
-              // Компактное фото
               Container(
                 width: 60,
                 height: 60,
@@ -217,8 +200,6 @@ class HomeScreenFull extends StatelessWidget {
                     : null,
               ),
               const SizedBox(width: 16),
-
-              // Имя и возраст
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,10 +227,7 @@ class HomeScreenFull extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(width: 12),
-
-              // Рост и вес вертикально
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
@@ -322,7 +300,6 @@ class HomeScreenFull extends StatelessWidget {
           builder: (context, snapshot) {
             final events = snapshot.data ?? [];
 
-            // Подсчитываем события по типам
             final sleepCount =
                 events.where((e) => e.eventType == EventType.sleep).length;
             final feedingCount =
@@ -332,7 +309,6 @@ class HomeScreenFull extends StatelessWidget {
             final bottleCount =
                 events.where((e) => e.eventType == EventType.bottle).length;
 
-            // Находим последние события
             final lastSleep =
                 events.where((e) => e.eventType == EventType.sleep).firstOrNull;
             final lastFeeding = events
@@ -414,7 +390,7 @@ class HomeScreenFull extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(width: 24), // Отступ в конце для красоты
+                  const SizedBox(width: 24),
                 ],
               ),
             );
@@ -461,7 +437,6 @@ class HomeScreenFull extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Бейдж с количеством
             Positioned(
               top: 6,
               right: 6,
@@ -484,7 +459,6 @@ class HomeScreenFull extends StatelessWidget {
                 ),
               ),
             ),
-            // Контент
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -518,7 +492,6 @@ class HomeScreenFull extends StatelessWidget {
                 ),
               ],
             ),
-            // Кнопка добавить
             Positioned(
               bottom: 6,
               left: 0,
@@ -691,7 +664,6 @@ class HomeScreenFull extends StatelessWidget {
       ),
       child: GestureDetector(
         onTap: () {
-          // Переходим к соответствующему экрану редактирования
           switch (event.eventType) {
             case EventType.sleep:
               Navigator.push(
@@ -726,7 +698,6 @@ class HomeScreenFull extends StatelessWidget {
               );
               break;
             default:
-              // Для других типов событий (например, health) можно добавить позже
               break;
           }
         },
@@ -736,7 +707,6 @@ class HomeScreenFull extends StatelessWidget {
   }
 
   Widget _buildEventItemFromEvent(Event event) {
-    // Для кормления используем специальный виджет с деталями
     if (event.eventType == EventType.feeding) {
       return _buildFeedingEventItem(event);
     }
@@ -759,7 +729,6 @@ class HomeScreenFull extends StatelessWidget {
               '${_formatTime(event.startedAt)} - ${_formatTime(event.endedAt!)}';
         } else {
           subtitle = '${_formatTime(event.startedAt)} - Сейчас';
-          // Для активных событий duration будет обновляться в виджете
           duration = null;
         }
         break;
@@ -773,7 +742,6 @@ class HomeScreenFull extends StatelessWidget {
           subtitle = '${_formatTime(event.startedAt)}, ${dur.inMinutes} мин';
         } else {
           subtitle = '${_formatTime(event.startedAt)} - Сейчас';
-          // Для активных событий duration будет обновляться в виджете
         }
         break;
 
@@ -888,7 +856,6 @@ class HomeScreenFull extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Показываем таймер только для активных событий
                   if (event.endedAt == null) ...[
                     const SizedBox(width: 8),
                     _LiveTimerWidget(
@@ -1137,9 +1104,10 @@ class _LiveTimerWidget extends StatefulWidget {
 
 class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
   late Stream<String> _timerStream;
-  late StreamSubscription<DocumentSnapshot>? _eventSubscription;
+  StreamSubscription<DocumentSnapshot>? _eventSubscription;
+  StreamSubscription<DocumentSnapshot>? _feedingDetailsSubscription;
   Event? _currentEvent;
-  final _timerStorage = TimerStorageService();
+  FeedingDetails? _currentFeedingDetails;
 
   @override
   void initState() {
@@ -1154,96 +1122,60 @@ class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
         .listen((snapshot) {
       if (snapshot.exists && mounted) {
         final updatedEvent = Event.fromFirestore(snapshot);
-        print(
-            'DEBUG LiveTimer: Event ${widget.event.id} updated - endedAt: ${updatedEvent.endedAt}');
         setState(() {
           _currentEvent = updatedEvent;
         });
       }
     });
 
+    // Для кормления подписываемся на детали
+    if (widget.event.eventType == EventType.feeding) {
+      _feedingDetailsSubscription = FirebaseFirestore.instance
+          .collection('feeding_details')
+          .doc(widget.event.id)
+          .snapshots()
+          .listen((snapshot) {
+        if (snapshot.exists && mounted) {
+          final details = FeedingDetails.fromFirestore(snapshot);
+          setState(() {
+            _currentFeedingDetails = details;
+          });
+        }
+      });
+    }
+
     _timerStream = Stream.periodic(const Duration(seconds: 1), (i) => i)
-        .asyncMap((_) => _formatTimerDisplay());
+        .map((_) => _formatTimerDisplay());
   }
 
   @override
   void dispose() {
     _eventSubscription?.cancel();
+    _feedingDetailsSubscription?.cancel();
     super.dispose();
   }
 
-  Future<String> _formatTimerDisplay() async {
+  String _formatTimerDisplay() {
     final currentEvent = _currentEvent ?? widget.event;
-
+    
     // Если событие завершено - не показываем
     if (currentEvent.endedAt != null) {
-      print('DEBUG LiveTimer: Event ${currentEvent.id} ended, hiding timer');
       return '';
     }
 
-    // Для кормления используем данные из TimerStorage
-    if (currentEvent.eventType == EventType.feeding) {
-      final timerState =
-          await _timerStorage.getTimerState(eventId: currentEvent.id);
-      if (timerState != null) {
-        // Всегда показываем общее время кормления, независимо от состояния активности грудей
-        final savedLeftSeconds = timerState['leftSeconds'] ?? 0;
-        final savedRightSeconds = timerState['rightSeconds'] ?? 0;
-        final isLeftActive = timerState['isLeftActive'] ?? false;
-        final isRightActive = timerState['isRightActive'] ?? false;
-
-        // Рассчитываем прошедшее время с момента сохранения
-        final startTime = timerState['startTime'];
-        final timeSinceSave = startTime != null
-            ? DateTime.now().difference(startTime).inSeconds
-            : 0;
-
-        // Добавляем прошедшее время к активной груди
-        final leftSeconds =
-            isLeftActive ? savedLeftSeconds + timeSinceSave : savedLeftSeconds;
-        final rightSeconds = isRightActive
-            ? savedRightSeconds + timeSinceSave
-            : savedRightSeconds;
-        final totalSeconds = leftSeconds + rightSeconds;
-
-        print(
-            'DEBUG LiveTimer: Event ${currentEvent.id} - from TimerStorage: Left=$leftSeconds ($isLeftActive), Right=$rightSeconds ($isRightActive), Total=$totalSeconds, timeSinceSave=$timeSinceSave');
-        return _formatDuration(totalSeconds);
-      }
+    // Для кормления используем данные из FeedingDetails
+    if (currentEvent.eventType == EventType.feeding &&
+        _currentFeedingDetails != null) {
+      final details = _currentFeedingDetails!.calculateCurrentDuration();
+      final totalSeconds = details.totalDurationSeconds;
+      return _formatDuration(totalSeconds);
     }
 
-    // Для сна тоже проверяем TimerStorage
-    if (currentEvent.eventType == EventType.sleep) {
-      final timerState =
-          await _timerStorage.getTimerState(eventId: currentEvent.id);
-      if (timerState != null) {
-        final savedElapsedSeconds = timerState['elapsedSeconds'] ?? 0;
-        final isPaused = timerState['isPaused'] ?? false;
-
-        // Рассчитываем прошедшее время с момента сохранения
-        final startTime = timerState['startTime'];
-        final timeSinceSave = startTime != null
-            ? DateTime.now().difference(startTime).inSeconds
-            : 0;
-
-        // Добавляем прошедшее время только если не на паузе
-        final elapsedSeconds = isPaused
-            ? savedElapsedSeconds
-            : savedElapsedSeconds + timeSinceSave;
-
-        print(
-            'DEBUG LiveTimer: Event ${currentEvent.id} - sleep from TimerStorage: $elapsedSeconds (saved: $savedElapsedSeconds, paused: $isPaused, timeSinceSave: $timeSinceSave)');
-        return _formatDuration(elapsedSeconds);
-      }
-    }
-
-    // Для остальных случаев используем разницу времени (fallback)
+    // Для сна и других событий используем разницу времени
     final now = DateTime.now();
     final diff = now.difference(currentEvent.startedAt);
     final totalSeconds = diff.inSeconds;
 
-    print(
-        'DEBUG LiveTimer: Event ${currentEvent.id} - fallback showing ${_formatDuration(totalSeconds)}');
     return _formatDuration(totalSeconds);
   }
 
