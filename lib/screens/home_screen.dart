@@ -783,12 +783,23 @@ class HomeScreenFull extends StatelessWidget {
           future: eventsProvider.getFeedingDetails(event.id),
           builder: (context, snapshot) {
             String breastInfo = '';
-            if (snapshot.hasData && snapshot.data != null) {
+            // Показываем информацию о груди только для активных событий (таймер запущен)
+            if (event.endedAt == null &&
+                snapshot.hasData &&
+                snapshot.data != null) {
               final details = snapshot.data!;
-              if (details.breastSide != null) {
-                breastInfo = details.breastSide == BreastSide.left
-                    ? 'Левая грудь'
-                    : 'Правая грудь';
+
+              // Показываем только активную грудь
+              switch (details.activeState) {
+                case FeedingActiveState.left:
+                  breastInfo = 'Левая грудь';
+                  break;
+                case FeedingActiveState.right:
+                  breastInfo = 'Правая грудь';
+                  break;
+                case FeedingActiveState.none:
+                  // Если таймер на паузе, не показываем информацию о груди
+                  break;
               }
             }
 
@@ -1157,7 +1168,7 @@ class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
 
   String _formatTimerDisplay() {
     final currentEvent = _currentEvent ?? widget.event;
-    
+
     // Если событие завершено - не показываем
     if (currentEvent.endedAt != null) {
       return '';

@@ -39,7 +39,6 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
 
   Future<void> _initializeData() async {
     final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
-    final babyProvider = Provider.of<BabyProvider>(context, listen: false);
 
     if (widget.event != null) {
       // Загружаем данные для редактирования
@@ -67,35 +66,9 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
       if (_existingDetails != null) {
         _isDayMode = _existingDetails!.sleepType == SleepType.day;
       }
-    } else {
-      // Проверяем, есть ли активное событие сна
-      final baby = babyProvider.currentBaby;
-      if (baby != null) {
-        final activeEvent = await eventsProvider.getActiveEvent(
-          baby.id,
-          EventType.sleep,
-        );
-        if (activeEvent != null) {
-          _isManualMode = false;
-          _startTime = activeEvent.startedAt;
-          _isTimerRunning = true;
-          _activeEventId = activeEvent.id;
-
-          if (activeEvent.notes != null) {
-            _notesController.text = activeEvent.notes!;
-          }
-
-          _startLocalTimer();
-
-          // Загружаем детали сна
-          _existingDetails =
-              await eventsProvider.getSleepDetails(activeEvent.id);
-          if (_existingDetails != null) {
-            _isDayMode = _existingDetails!.sleepType == SleepType.day;
-          }
-        }
-      }
     }
+    // Убираем логику автоматического переключения в активный таймер
+    // Пользователь должен иметь возможность создавать новые события независимо от активных
     setState(() {});
   }
 

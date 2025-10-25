@@ -43,7 +43,6 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
   Future<void> _initializeData() async {
     final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
-    final babyProvider = Provider.of<BabyProvider>(context, listen: false);
 
     if (widget.event != null) {
       // Загружаем данные для редактирования
@@ -95,54 +94,9 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       if (widget.event!.notes != null) {
         _notesController.text = widget.event!.notes!;
       }
-    } else {
-      // Проверяем, есть ли активное событие кормления
-      final baby = babyProvider.currentBaby;
-      if (baby != null) {
-        final activeEvent = await eventsProvider.getActiveEvent(
-          baby.id,
-          EventType.feeding,
-        );
-        if (activeEvent != null) {
-          _isManualMode = false;
-          _startTime = activeEvent.startedAt;
-          _activeEventId = activeEvent.id;
-
-          if (activeEvent.notes != null) {
-            _notesController.text = activeEvent.notes!;
-          }
-
-          // Загружаем детали кормления из Firestore
-          _existingDetails =
-              await eventsProvider.getFeedingDetails(activeEvent.id);
-          if (_existingDetails != null) {
-            _breastSide = _existingDetails!.breastSide ?? BreastSide.left;
-            _leftSeconds = _existingDetails!.leftDurationSeconds ?? 0;
-            _rightSeconds = _existingDetails!.rightDurationSeconds ?? 0;
-
-            _isLeftActive =
-                _existingDetails!.activeState == FeedingActiveState.left;
-            _isRightActive =
-                _existingDetails!.activeState == FeedingActiveState.right;
-
-            // Добавляем прошедшее время с момента последней активности
-            if ((_isLeftActive || _isRightActive) &&
-                _existingDetails!.lastActivityAt != null) {
-              final timeSinceLast = DateTime.now()
-                  .difference(_existingDetails!.lastActivityAt!)
-                  .inSeconds;
-              if (_isLeftActive) {
-                _leftSeconds += timeSinceLast;
-              } else if (_isRightActive) {
-                _rightSeconds += timeSinceLast;
-              }
-            }
-          }
-
-          _startLocalTimer();
-        }
-      }
     }
+    // Убираем логику автоматического переключения в активный таймер
+    // Пользователь должен иметь возможность создавать новые события независимо от активных
     setState(() {});
   }
 
@@ -354,7 +308,93 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
     });
   }
 
+  Future<void> _pauseFeeding() async {
+    if (_activeEventId != null) {
+      final eventsProvider =
+          Provider.of<EventsProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      final now = DateTime.now();
+
+      // Обновляем детали кормления с текущим состоянием
+      final pauseDetails = FeedingDetails(
+        id: _activeEventId!,
+        eventId: _activeEventId!,
+        breastSide: _leftSeconds > 0 && _rightSeconds > 0
+            ? BreastSide.both
+            : (_leftSeconds > 0 ? BreastSide.left : BreastSide.right),
+        leftDurationSeconds: _leftSeconds,
+        rightDurationSeconds: _rightSeconds,
+        activeState: FeedingActiveState.none, // Ставим на паузу
+        lastActivityAt: now,
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+      );
+
+      await eventsProvider.updateFeedingDetails(_activeEventId!, pauseDetails);
+
+      // Делаем промежуточное сохранение - записываем endedAt для сохранения прогресса
+      await eventsProvider.stopFeedingEvent(
+        eventId: _activeEventId!,
+        endedAt: now,
+        lastModifiedBy: authProvider.currentUser?.uid,
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+      );
+
+      // Сразу создаем новое активное событие для возможности продолжения
+      final newEventId = await eventsProvider.startFeedingEvent(
+        babyId: (Provider.of<BabyProvider>(context, listen: false)
+            .currentBaby
+            ?.id)!,
+        familyId: (Provider.of<BabyProvider>(context, listen: false)
+            .currentBaby
+            ?.familyId)!,
+        startedAt: now,
+        createdBy: authProvider.currentUser!.uid,
+        createdByName: authProvider.currentUser!.displayName ?? 'Пользователь',
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+      );
+
+      if (newEventId != null) {
+        // Создаем детали для нового события с сохраненным прогрессом
+        final continueDetails = FeedingDetails(
+          id: newEventId,
+          eventId: newEventId,
+          breastSide: _leftSeconds > 0 && _rightSeconds > 0
+              ? BreastSide.both
+              : (_leftSeconds > 0 ? BreastSide.left : BreastSide.right),
+          leftDurationSeconds: _leftSeconds,
+          rightDurationSeconds: _rightSeconds,
+          activeState: FeedingActiveState.none,
+          lastActivityAt: now,
+          notes: null,
+        );
+        await eventsProvider.updateFeedingDetails(newEventId, continueDetails);
+        _activeEventId = newEventId;
+      }
+    }
+
+    setState(() {
+      _isLeftActive = false;
+      _isRightActive = false;
+    });
+  }
+
   void _toggleBreast(bool isLeft) async {
+    // Если нажали "Пауза" на активной груди - делаем промежуточное сохранение
+    if ((isLeft && _isLeftActive) || (!isLeft && _isRightActive)) {
+      await _pauseFeeding();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Кормление приостановлено и сохранено'),
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Если событие не создано - создаем его
     if (_activeEventId == null) {
       await _createActiveEvent();
       // Запускаем таймер после создания активного события
@@ -368,19 +408,11 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
     setState(() {
       if (isLeft) {
-        if (_isLeftActive) {
-          _isLeftActive = false;
-        } else {
-          _isLeftActive = true;
-          _isRightActive = false;
-        }
+        _isLeftActive = true;
+        _isRightActive = false;
       } else {
-        if (_isRightActive) {
-          _isRightActive = false;
-        } else {
-          _isRightActive = true;
-          _isLeftActive = false;
-        }
+        _isRightActive = true;
+        _isLeftActive = false;
       }
     });
 
