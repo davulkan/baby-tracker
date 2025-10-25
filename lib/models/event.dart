@@ -11,6 +11,16 @@ enum EventType {
   other,
 }
 
+enum EventStatus {
+  active, // Событие идет прямо сейчас (таймер)
+  completed, // Событие завершено
+}
+
+enum BottleType {
+  formula,
+  breastMilk,
+}
+
 class Event {
   final String id;
   final String babyId;
@@ -26,7 +36,14 @@ class Event {
   final String createdByName;
   final String? lastModifiedBy;
   final int version;
+  final EventStatus status; // ← НОВОЕ ПОЛЕ
 
+  // Поля для бутылочки
+  final BottleType? bottleType;
+  final double? volumeMl;
+
+  bool get isActive => status == EventStatus.active;
+  Duration get currentDuration => DateTime.now().difference(startedAt);
   // Поля для таймеров
   // Убраны из Firestore, теперь только локально
 
@@ -36,6 +53,7 @@ class Event {
     required this.familyId,
     required this.eventType,
     required this.startedAt,
+    required this.status,
     this.endedAt,
     this.notes,
     this.photoUrls,
@@ -45,6 +63,8 @@ class Event {
     required this.createdByName,
     this.lastModifiedBy,
     this.version = 1,
+    this.bottleType,
+    this.volumeMl,
   });
 
   factory Event.fromFirestore(DocumentSnapshot doc) {
@@ -55,6 +75,7 @@ class Event {
       familyId: data['family_id'] ?? '',
       eventType: _parseEventType(data['event_type']),
       startedAt: (data['started_at'] as Timestamp).toDate(),
+      status: _parseEventStatus(data['status']),
       endedAt: data['ended_at'] != null
           ? (data['ended_at'] as Timestamp).toDate()
           : null,
@@ -72,7 +93,34 @@ class Event {
       createdByName: data['created_by_name'] ?? '',
       lastModifiedBy: data['last_modified_by'],
       version: data['version'] ?? 1,
+      bottleType: data['bottle_type'] != null
+          ? _parseBottleType(data['bottle_type'])
+          : null,
+      volumeMl: data['volume_ml'] != null
+          ? (data['volume_ml'] as num).toDouble()
+          : null,
     );
+  }
+  static EventStatus _parseEventStatus(String? status) {
+    switch (status) {
+      case 'active':
+        return EventStatus.active;
+      case 'completed':
+        return EventStatus.completed;
+      default:
+        return EventStatus.completed;
+    }
+  }
+
+  static BottleType _parseBottleType(String? type) {
+    switch (type) {
+      case 'formula':
+        return BottleType.formula;
+      case 'breastMilk':
+        return BottleType.breastMilk;
+      default:
+        return BottleType.formula;
+    }
   }
 
   Map<String, dynamic> toFirestore() {
@@ -90,6 +138,8 @@ class Event {
       'created_by_name': createdByName,
       'last_modified_by': lastModifiedBy,
       'version': version,
+      if (bottleType != null) 'bottle_type': bottleType!.name,
+      if (volumeMl != null) 'volume_ml': volumeMl,
     };
   }
 
@@ -136,12 +186,16 @@ class Event {
     String? createdByName,
     String? lastModifiedBy,
     int? version,
+    EventStatus? status,
+    BottleType? bottleType,
+    double? volumeMl,
   }) {
     return Event(
       id: id ?? this.id,
       babyId: babyId ?? this.babyId,
       familyId: familyId ?? this.familyId,
       eventType: eventType ?? this.eventType,
+      status: status ?? this.status,
       startedAt: startedAt ?? this.startedAt,
       endedAt: endedAt ?? this.endedAt,
       notes: notes ?? this.notes,
@@ -152,6 +206,8 @@ class Event {
       createdByName: createdByName ?? this.createdByName,
       lastModifiedBy: lastModifiedBy ?? this.lastModifiedBy,
       version: version ?? this.version,
+      bottleType: bottleType ?? this.bottleType,
+      volumeMl: volumeMl ?? this.volumeMl,
     );
   }
 }

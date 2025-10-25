@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
-import 'package:baby_tracker/models/bottle_event.dart';
+
 import 'package:baby_tracker/models/event.dart';
 
 class AddBottleScreen extends StatefulWidget {
@@ -29,13 +29,16 @@ class _AddBottleScreenState extends State<AddBottleScreen> {
   void initState() {
     super.initState();
 
-    if (widget.event != null && widget.event is BottleEvent) {
-      final bottleEvent = widget.event as BottleEvent;
+    
+      final bottleEvent = widget.event;
+      if(bottleEvent != null){
       _selectedTime = bottleEvent.startedAt;
-      _selectedBottleType = bottleEvent.bottleType;
+      _selectedBottleType = bottleEvent.bottleType ?? BottleType.formula;
       _volumeController.text = bottleEvent.volumeMl.toString();
       _notesController.text = bottleEvent.notes ?? '';
-    }
+      }
+
+    
   }
 
   @override

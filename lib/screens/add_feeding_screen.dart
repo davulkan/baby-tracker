@@ -309,7 +309,7 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
             breastSide: _breastSide,
             leftDurationSeconds: null,
             rightDurationSeconds: null,
-            bottleAmountMl: null,
+ 
             notes: _notesController.text.isEmpty ? null : _notesController.text,
           );
           await eventsProvider.updateFeedingDetails(
@@ -586,7 +586,7 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       breastSide: breastSide,
       leftDurationSeconds: _leftSeconds,
       rightDurationSeconds: _rightSeconds,
-      bottleAmountMl: null,
+
       notes: null,
     );
 

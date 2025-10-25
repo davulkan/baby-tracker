@@ -5,7 +5,6 @@ import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/models/sleep_details.dart';
 import 'package:baby_tracker/models/diaper_details.dart';
-import 'package:baby_tracker/models/bottle_event.dart';
 
 class EventsProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -65,6 +64,7 @@ class EventsProvider with ChangeNotifier {
 
       // Создаем основное событие
       final event = Event(
+        status: EventStatus.active,
         id: '',
         babyId: babyId,
         familyId: familyId,
@@ -76,6 +76,7 @@ class EventsProvider with ChangeNotifier {
         lastModifiedAt: DateTime.now(),
         createdBy: createdBy,
         createdByName: createdByName,
+        
       );
 
       final eventDoc =
@@ -138,6 +139,7 @@ class EventsProvider with ChangeNotifier {
         lastModifiedAt: DateTime.now(),
         createdBy: createdBy,
         createdByName: createdByName,
+        status: EventStatus.active,
       );
 
       final eventDoc =
@@ -150,7 +152,7 @@ class EventsProvider with ChangeNotifier {
         breastSide: breastSide,
         leftDurationSeconds: leftDurationSeconds,
         rightDurationSeconds: rightDurationSeconds,
-        bottleAmountMl: bottleAmountMl,
+        
         notes: notes,
       );
 
@@ -198,6 +200,7 @@ class EventsProvider with ChangeNotifier {
         lastModifiedAt: DateTime.now(),
         createdBy: createdBy,
         createdByName: createdByName,
+        status: EventStatus.active,
       );
 
       final eventDoc =

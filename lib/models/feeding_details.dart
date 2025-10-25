@@ -1,11 +1,16 @@
 // lib/models/feeding_details.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 enum BreastSide {
   left,
   right,
   both,
+}
+
+enum FeedingActiveState {
+  none, // Обе груди на паузе
+  left, // Активна левая грудь
+  right, // Активна правая грудь
 }
 
 class FeedingDetails {
@@ -14,9 +19,8 @@ class FeedingDetails {
   final BreastSide? breastSide;
   final int? leftDurationSeconds;
   final int? rightDurationSeconds;
-  final double? bottleAmountMl;
-  final double? bottleAmountOz;
-  final String? formulaType;
+  final FeedingActiveState activeState; // Какая грудь активна сейчас
+  final DateTime? lastActivityAt; // Когда последний раз была активность
   final String? notes;
 
   FeedingDetails({
@@ -25,9 +29,8 @@ class FeedingDetails {
     this.breastSide,
     this.leftDurationSeconds,
     this.rightDurationSeconds,
-    this.bottleAmountMl,
-    this.bottleAmountOz,
-    this.formulaType,
+    this.activeState = FeedingActiveState.none,
+    this.lastActivityAt,
     this.notes,
   });
 
@@ -39,9 +42,10 @@ class FeedingDetails {
       breastSide: _parseBreastSide(data['breast_side']),
       leftDurationSeconds: data['left_duration_seconds'],
       rightDurationSeconds: data['right_duration_seconds'],
-      bottleAmountMl: data['bottle_amount_ml']?.toDouble(),
-      bottleAmountOz: data['bottle_amount_oz']?.toDouble(),
-      formulaType: data['formula_type'],
+      activeState: _parseActiveState(data['active_state']),
+      lastActivityAt: data['last_activity_at'] != null
+          ? (data['last_activity_at'] as Timestamp).toDate()
+          : null,
       notes: data['notes'],
     );
   }
@@ -52,14 +56,12 @@ class FeedingDetails {
       'breast_side': breastSide?.name,
       'left_duration_seconds': leftDurationSeconds,
       'right_duration_seconds': rightDurationSeconds,
-      'bottle_amount_ml': bottleAmountMl,
-      'bottle_amount_oz': bottleAmountOz,
-      'formula_type': formulaType,
+      'active_state': activeState.name,
+      'last_activity_at':
+          lastActivityAt != null ? Timestamp.fromDate(lastActivityAt!) : null,
       'notes': notes,
     };
   }
-
-
 
   static BreastSide? _parseBreastSide(String? side) {
     switch (side) {
@@ -74,13 +76,51 @@ class FeedingDetails {
     }
   }
 
-  // Общая продолжительность кормления грудью в минутах
-  int? get totalDurationMinutes {
-    if (leftDurationSeconds == null && rightDurationSeconds == null) {
-      return null;
+  static FeedingActiveState _parseActiveState(String? state) {
+    switch (state) {
+      case 'left':
+        return FeedingActiveState.left;
+      case 'right':
+        return FeedingActiveState.right;
+      case 'none':
+        return FeedingActiveState.none;
+      default:
+        return FeedingActiveState.none;
     }
-    final total = (leftDurationSeconds ?? 0) + (rightDurationSeconds ?? 0);
-    return (total / 60).round();
+  }
+
+  // Общая продолжительность кормления грудью в секундах
+  int get totalDurationSeconds {
+    return (leftDurationSeconds ?? 0) + (rightDurationSeconds ?? 0);
+  }
+
+  // Общая продолжительность в минутах
+  int get totalDurationMinutes {
+    return (totalDurationSeconds / 60).round();
+  }
+
+  // Вычислить актуальную длительность с учетом текущего времени
+  FeedingDetails calculateCurrentDuration() {
+    if (activeState == FeedingActiveState.none || lastActivityAt == null) {
+      return this;
+    }
+
+    final now = DateTime.now();
+    final elapsedSeconds = now.difference(lastActivityAt!).inSeconds;
+
+    if (activeState == FeedingActiveState.left) {
+      return copyWith(
+        leftDurationSeconds: (leftDurationSeconds ?? 0) + elapsedSeconds,
+        lastActivityAt: now,
+      );
+    } else if (activeState == FeedingActiveState.right) {
+      return copyWith(
+        rightDurationSeconds: (rightDurationSeconds ?? 0) + elapsedSeconds,
+        lastActivityAt: now,
+      );
+    }
+
+    return this;
   }
 
   FeedingDetails copyWith({
@@ -89,6 +129,8 @@ class FeedingDetails {
     BreastSide? breastSide,
     int? leftDurationSeconds,
     int? rightDurationSeconds,
+    FeedingActiveState? activeState,
+    DateTime? lastActivityAt,
     double? bottleAmountMl,
     double? bottleAmountOz,
     String? formulaType,
@@ -100,9 +142,8 @@ class FeedingDetails {
       breastSide: breastSide ?? this.breastSide,
       leftDurationSeconds: leftDurationSeconds ?? this.leftDurationSeconds,
       rightDurationSeconds: rightDurationSeconds ?? this.rightDurationSeconds,
-      bottleAmountMl: bottleAmountMl ?? this.bottleAmountMl,
-      bottleAmountOz: bottleAmountOz ?? this.bottleAmountOz,
-      formulaType: formulaType ?? this.formulaType,
+      activeState: activeState ?? this.activeState,
+      lastActivityAt: lastActivityAt ?? this.lastActivityAt,
       notes: notes ?? this.notes,
     );
   }
