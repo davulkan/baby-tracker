@@ -626,8 +626,16 @@ class _StatsScreenState extends State<StatsScreen>
     final width =
         ((endMinuteOfDay - startMinuteOfDay) / totalMinutes) * totalWidth;
 
-    // Минимальная ширина для видимости
-    final displayWidth = width.clamp(2.0, totalWidth - left);
+    // Минимальная ширина для видимости и защита от отрицательных ограничений
+    final maxAvailableWidth = totalWidth - left;
+    if (maxAvailableWidth <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    double displayWidth = width.clamp(0.0, maxAvailableWidth);
+    if (displayWidth < 2.0) {
+      displayWidth = maxAvailableWidth >= 2.0 ? 2.0 : maxAvailableWidth;
+    }
 
     final trackHeight = totalHeight / totalTracks.clamp(1, 10);
     final top = track * trackHeight;
