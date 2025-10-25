@@ -817,8 +817,7 @@ class HomeScreenFull extends StatelessWidget {
             String breastInfo = '';
             if (snapshot.hasData && snapshot.data != null) {
               final details = snapshot.data!;
-              if (details.feedingType == FeedingType.breast &&
-                  details.breastSide != null) {
+              if (details.breastSide != null) {
                 breastInfo = details.breastSide == BreastSide.left
                     ? 'Левая грудь'
                     : 'Правая грудь';
@@ -1184,35 +1183,67 @@ class _LiveTimerWidgetState extends State<_LiveTimerWidget> {
 
     // Для кормления используем данные из TimerStorage
     if (currentEvent.eventType == EventType.feeding) {
-      final timerState = await _timerStorage.getTimerState();
-      if (timerState != null && timerState['eventId'] == currentEvent.id) {
+      final timerState =
+          await _timerStorage.getTimerState(eventId: currentEvent.id);
+      if (timerState != null) {
+        // Всегда показываем общее время кормления, независимо от состояния активности грудей
+        final savedLeftSeconds = timerState['leftSeconds'] ?? 0;
+        final savedRightSeconds = timerState['rightSeconds'] ?? 0;
         final isLeftActive = timerState['isLeftActive'] ?? false;
         final isRightActive = timerState['isRightActive'] ?? false;
 
-        if (!isLeftActive && !isRightActive) {
-          print(
-              'DEBUG LiveTimer: Event ${currentEvent.id} - both breasts paused, hiding timer');
-          return '';
-        }
+        // Рассчитываем прошедшее время с момента сохранения
+        final startTime = timerState['startTime'];
+        final timeSinceSave = startTime != null
+            ? DateTime.now().difference(startTime).inSeconds
+            : 0;
 
-        // Используем сумму leftSeconds + rightSeconds из TimerStorage
-        final leftSeconds = timerState['leftSeconds'] ?? 0;
-        final rightSeconds = timerState['rightSeconds'] ?? 0;
+        // Добавляем прошедшее время к активной груди
+        final leftSeconds =
+            isLeftActive ? savedLeftSeconds + timeSinceSave : savedLeftSeconds;
+        final rightSeconds = isRightActive
+            ? savedRightSeconds + timeSinceSave
+            : savedRightSeconds;
         final totalSeconds = leftSeconds + rightSeconds;
 
         print(
-            'DEBUG LiveTimer: Event ${currentEvent.id} - from TimerStorage: Left=$leftSeconds, Right=$rightSeconds, Total=$totalSeconds');
+            'DEBUG LiveTimer: Event ${currentEvent.id} - from TimerStorage: Left=$leftSeconds ($isLeftActive), Right=$rightSeconds ($isRightActive), Total=$totalSeconds, timeSinceSave=$timeSinceSave');
         return _formatDuration(totalSeconds);
       }
     }
 
-    // Для других типов событий (сон) используем разницу времени
+    // Для сна тоже проверяем TimerStorage
+    if (currentEvent.eventType == EventType.sleep) {
+      final timerState =
+          await _timerStorage.getTimerState(eventId: currentEvent.id);
+      if (timerState != null) {
+        final savedElapsedSeconds = timerState['elapsedSeconds'] ?? 0;
+        final isPaused = timerState['isPaused'] ?? false;
+
+        // Рассчитываем прошедшее время с момента сохранения
+        final startTime = timerState['startTime'];
+        final timeSinceSave = startTime != null
+            ? DateTime.now().difference(startTime).inSeconds
+            : 0;
+
+        // Добавляем прошедшее время только если не на паузе
+        final elapsedSeconds = isPaused
+            ? savedElapsedSeconds
+            : savedElapsedSeconds + timeSinceSave;
+
+        print(
+            'DEBUG LiveTimer: Event ${currentEvent.id} - sleep from TimerStorage: $elapsedSeconds (saved: $savedElapsedSeconds, paused: $isPaused, timeSinceSave: $timeSinceSave)');
+        return _formatDuration(elapsedSeconds);
+      }
+    }
+
+    // Для остальных случаев используем разницу времени (fallback)
     final now = DateTime.now();
     final diff = now.difference(currentEvent.startedAt);
     final totalSeconds = diff.inSeconds;
 
     print(
-        'DEBUG LiveTimer: Event ${currentEvent.id} - showing ${_formatDuration(totalSeconds)}');
+        'DEBUG LiveTimer: Event ${currentEvent.id} - fallback showing ${_formatDuration(totalSeconds)}');
     return _formatDuration(totalSeconds);
   }
 

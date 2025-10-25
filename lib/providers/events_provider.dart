@@ -115,7 +115,6 @@ class EventsProvider with ChangeNotifier {
     DateTime? endedAt,
     required String createdBy,
     required String createdByName,
-    required FeedingType feedingType,
     BreastSide? breastSide,
     int? leftDurationSeconds,
     int? rightDurationSeconds,
@@ -148,7 +147,6 @@ class EventsProvider with ChangeNotifier {
       final feedingDetails = FeedingDetails(
         id: '',
         eventId: eventDoc.id,
-        feedingType: feedingType,
         breastSide: breastSide,
         leftDurationSeconds: leftDurationSeconds,
         rightDurationSeconds: rightDurationSeconds,
@@ -629,7 +627,6 @@ class EventsProvider with ChangeNotifier {
     required DateTime startedAt,
     required String createdBy,
     required String createdByName,
-    required FeedingType feedingType,
     String? notes,
   }) async {
     try {
@@ -648,8 +645,6 @@ class EventsProvider with ChangeNotifier {
         'created_by': createdBy,
         'created_by_name': createdByName,
         'version': 1,
-        // Специфичные для кормления поля
-        'feeding_type': feedingType.name,
       };
 
       final docRef = await _firestore.collection('events').add(eventData);
@@ -663,6 +658,20 @@ class EventsProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return null;
+    }
+  }
+
+  // Обновление ended_at для активного события (для таймеров)
+  Future<bool> updateEventEndTime(String eventId, DateTime endedAt) async {
+    try {
+      await _firestore.collection('events').doc(eventId).update({
+        'ended_at': Timestamp.fromDate(endedAt),
+        'last_modified_at': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Error updating event end time: $e');
+      return false;
     }
   }
 

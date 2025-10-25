@@ -1,11 +1,6 @@
 // lib/models/feeding_details.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum FeedingType {
-  breast,
-  bottle,
-  solid,
-}
 
 enum BreastSide {
   left,
@@ -16,7 +11,6 @@ enum BreastSide {
 class FeedingDetails {
   final String id;
   final String eventId;
-  final FeedingType feedingType;
   final BreastSide? breastSide;
   final int? leftDurationSeconds;
   final int? rightDurationSeconds;
@@ -28,7 +22,6 @@ class FeedingDetails {
   FeedingDetails({
     required this.id,
     required this.eventId,
-    required this.feedingType,
     this.breastSide,
     this.leftDurationSeconds,
     this.rightDurationSeconds,
@@ -43,7 +36,6 @@ class FeedingDetails {
     return FeedingDetails(
       id: doc.id,
       eventId: data['event_id'] ?? '',
-      feedingType: _parseFeedingType(data['feeding_type']),
       breastSide: _parseBreastSide(data['breast_side']),
       leftDurationSeconds: data['left_duration_seconds'],
       rightDurationSeconds: data['right_duration_seconds'],
@@ -57,7 +49,6 @@ class FeedingDetails {
   Map<String, dynamic> toFirestore() {
     return {
       'event_id': eventId,
-      'feeding_type': feedingType.name,
       'breast_side': breastSide?.name,
       'left_duration_seconds': leftDurationSeconds,
       'right_duration_seconds': rightDurationSeconds,
@@ -68,18 +59,7 @@ class FeedingDetails {
     };
   }
 
-  static FeedingType _parseFeedingType(String? type) {
-    switch (type) {
-      case 'breast':
-        return FeedingType.breast;
-      case 'bottle':
-        return FeedingType.bottle;
-      case 'solid':
-        return FeedingType.solid;
-      default:
-        return FeedingType.breast;
-    }
-  }
+
 
   static BreastSide? _parseBreastSide(String? side) {
     switch (side) {
@@ -106,7 +86,6 @@ class FeedingDetails {
   FeedingDetails copyWith({
     String? id,
     String? eventId,
-    FeedingType? feedingType,
     BreastSide? breastSide,
     int? leftDurationSeconds,
     int? rightDurationSeconds,
@@ -118,7 +97,6 @@ class FeedingDetails {
     return FeedingDetails(
       id: id ?? this.id,
       eventId: eventId ?? this.eventId,
-      feedingType: feedingType ?? this.feedingType,
       breastSide: breastSide ?? this.breastSide,
       leftDurationSeconds: leftDurationSeconds ?? this.leftDurationSeconds,
       rightDurationSeconds: rightDurationSeconds ?? this.rightDurationSeconds,
