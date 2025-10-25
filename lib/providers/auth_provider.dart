@@ -7,10 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-      // Для веба можно не указывать clientId, если он указан в meta теге
-      // Для мобильных платформ нужно будет добавить соответствующие настройки
-      );
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
   User? _user;
   String? _familyId;
@@ -72,42 +69,68 @@ class AuthProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
+      debugPrint('Начинаем процесс входа через Google...');
+
       // Инициируем процесс входа через Google
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      debugPrint('Вызываем _googleSignIn.authenticate()...');
+      final GoogleSignInAccount? googleUser =
+          await _googleSignIn.authenticate();
 
       if (googleUser == null) {
         // Пользователь отменил вход
+        debugPrint('Пользователь отменил вход через Google');
         _isLoading = false;
         notifyListeners();
         return false;
       }
 
-      // Получаем детали аутентификации от запроса
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      debugPrint(
+          'Google Sign-In успешен, получен аккаунт: ${googleUser.email}');
 
-      // Создаём новые учетные данные
+      debugPrint('Авторизуемся в Firebase через Google Sign-In...');
+      // В новой версии GoogleSignIn мы можем напрямую получать учетные данные для Firebase
+      // Используем стандартные scope-ы для Firebase
+      final authorization = await googleUser.authorizationClient
+          .authorizationForScopes(['email', 'profile', 'openid']);
+
+      if (authorization == null) {
+        throw Exception('Не удалось получить авторизацию от Google');
+      }
+
+      debugPrint('Токены получены успешно');
+
+      // Создаём учетные данные для Firebase с доступным токеном
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+        accessToken: authorization.accessToken,
+        idToken: null, // В новой версии idToken может быть недоступен
       );
 
       // Входим в Firebase с учетными данными Google
-      await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
 
+      debugPrint('Firebase авторизация успешна: ${userCredential.user?.email}');
       return true;
     } catch (e) {
       String errorMessage = 'Ошибка входа через Google';
 
-      if (e.toString().contains('ClientID not set')) {
+      debugPrint('Ошибка входа через Google: $e');
+      debugPrint('Тип ошибки: ${e.runtimeType}');
+
+      if (e.toString().contains('ClientID not set') ||
+          e.toString().contains('No such module \'GoogleSignIn\'')) {
         errorMessage =
-            'Google Sign-In не настроен. Обратитесь к администратору.';
+            'Google Sign-In не настроен. Проверьте конфигурацию iOS.';
+      } else if (e.toString().contains('network')) {
+        errorMessage = 'Проблемы с сетью. Проверьте подключение к интернету.';
+      } else if (e.toString().contains('sign_in_canceled')) {
+        errorMessage = 'Вход отменен пользователем';
+      } else if (e.toString().contains('sign_in_failed')) {
+        errorMessage = 'Ошибка входа через Google. Попробуйте еще раз.';
       } else {
-        errorMessage = 'Ошибка входа через Google: $e';
+        errorMessage = 'Ошибка входа через Google: ${e.toString()}';
       }
 
       _error = errorMessage;
-      debugPrint('Error signing in with Google: $e');
       notifyListeners();
       return false;
     } finally {
@@ -316,26 +339,6 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('Error getting family info: $e');
       return null;
-    }
-  }
-
-  // Перевод кодов ошибок Firebase
-  String _getAuthErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'Пользователь не найден';
-      case 'wrong-password':
-        return 'Неверный пароль';
-      case 'email-already-in-use':
-        return 'Email уже используется';
-      case 'invalid-email':
-        return 'Неверный формат email';
-      case 'weak-password':
-        return 'Слишком слабый пароль';
-      case 'network-request-failed':
-        return 'Ошибка сети';
-      default:
-        return 'Произошла ошибка';
     }
   }
 
