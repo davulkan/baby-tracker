@@ -1,12 +1,14 @@
-// lib/main.dart
-import 'package:baby_tracker/providers/events_provider.dart';
-import 'package:baby_tracker/providers/theme_provider.dart' as theme;
-import 'package:baby_tracker/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
+import 'package:baby_tracker/providers/connectivity_provider.dart';
+import 'package:baby_tracker/providers/events_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart' as theme;
+import 'package:baby_tracker/screens/home/home_screen.dart';
 import 'package:baby_tracker/screens/splash_screen.dart';
 import 'package:baby_tracker/screens/auth_screen.dart';
 import 'package:baby_tracker/screens/family_setup_screen.dart';
@@ -18,6 +20,11 @@ void main() async {
   // Инициализация Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Включение оффлайн persistence для Firestore
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
   );
 
   runApp(const MyApp());
@@ -32,6 +39,9 @@ class MyApp extends StatelessWidget {
       providers: [
         // ThemeProvider
         ChangeNotifierProvider(create: (_) => theme.ThemeProvider()),
+
+        // ConnectivityProvider
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
 
         // AuthProvider должен быть первым
         ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -66,6 +76,16 @@ class MyApp extends StatelessWidget {
                 : themeProvider.themeMode == theme.ThemeMode.dark
                     ? ThemeMode.dark
                     : ThemeMode.light,
+            localizationsDelegates: [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('ru', 'RU'),
+              Locale('en', 'US'),
+            ],
+            locale: const Locale('ru', 'RU'),
             home: const AuthWrapper(),
           );
         },

@@ -1,59 +1,225 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:baby_tracker/providers/baby_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/screens/stats/stats_screen.dart';
 import 'package:baby_tracker/screens/settings/settings_screen.dart';
+import 'package:baby_tracker/screens/settings/widgets/baby_profile_screen.dart';
 
 class HomeTopBar extends StatelessWidget {
   const HomeTopBar({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const StatsScreen()),
-              );
-            },
-            icon: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.bar_chart,
-                color: Color(0xFFFF8A80),
-                size: 24,
-              ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const StatsScreen()),
+            );
+          },
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: context.appColors.surfaceColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.bar_chart,
+              color: context.appColors.primaryAccent,
+              size: 20,
             ),
           ),
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        ),
+        // Три чипа: вес - фото+имя+возраст - рост
+        Consumer<BabyProvider>(
+          builder: (context, babyProvider, child) {
+            final baby = babyProvider.currentBaby;
+            if (baby == null) {
+              return IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BabyProfileScreen(),
+                    ),
+                  );
+                },
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: context.appColors.surfaceColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.add,
+                    color: context.appColors.primaryAccent,
+                    size: 20,
+                  ),
+                ),
               );
-            },
-            icon: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.settings,
-                color: Color(0xFFFF8A80),
-                size: 24,
-              ),
+            }
+
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Чип с весом
+                if (baby.weightAtBirthKg != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: context.appColors.primaryAccent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: context.appColors.primaryAccent.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      '${baby.weightAtBirthKg!.toStringAsFixed(1)} кг',
+                      style: TextStyle(
+                        color: context.appColors.primaryAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                // Чип с фото и именем
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BabyProfileScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: context.appColors.surfaceColor,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                context.appColors.primaryAccent
+                                    .withOpacity(0.2),
+                                context.appColors.secondaryAccent
+                                    .withOpacity(0.2),
+                              ],
+                            ),
+                            image: baby.photoUrl != null
+                                ? DecorationImage(
+                                    image: NetworkImage(baby.photoUrl!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          child: baby.photoUrl == null
+                              ? Icon(
+                                  Icons.child_care,
+                                  size: 14,
+                                  color: context.appColors.primaryAccent,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              baby.name,
+                              style: TextStyle(
+                                color: context.appColors.textPrimaryColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              baby.ageText,
+                              style: TextStyle(
+                                color: context.appColors.textSecondaryColor,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Чип с ростом
+                if (baby.heightAtBirthCm != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: context.appColors.successColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: context.appColors.successColor.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      '${baby.heightAtBirthCm!.toStringAsFixed(0)} см',
+                      style: TextStyle(
+                        color: context.appColors.successColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+        IconButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            );
+          },
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: context.appColors.surfaceColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.settings,
+              color: context.appColors.primaryAccent,
+              size: 20,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

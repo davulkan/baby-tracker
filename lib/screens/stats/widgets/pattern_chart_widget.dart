@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 
 class PatternChartWidget extends StatelessWidget {
   final List<Map<String, dynamic>> chartEvents;
@@ -13,7 +14,7 @@ class PatternChartWidget extends StatelessWidget {
     return Container(
       height: 120,
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: context.appColors.surfaceColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -28,8 +29,8 @@ class PatternChartWidget extends StatelessWidget {
                     child: hour % 3 == 0
                         ? Text(
                             hour.toString().padLeft(2, '0'),
-                            style: const TextStyle(
-                              color: Colors.white60,
+                            style: TextStyle(
+                              color: context.appColors.textSecondaryColor,
                               fontSize: 9,
                             ),
                           )
@@ -46,26 +47,6 @@ class PatternChartWidget extends StatelessWidget {
                 builder: (context, constraints) {
                   return Stack(
                     children: [
-                      // Сетка
-                      Row(
-                        children: List.generate(24, (hour) {
-                          return Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  left: BorderSide(
-                                    color: hour % 3 == 0
-                                        ? Colors.white12
-                                        : Colors.white.withOpacity(0.03),
-                                    width: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-
                       // События (сортируем по длительности - длинные рисуются первыми)
                       ...(() {
                         final sortedEvents =
@@ -80,9 +61,28 @@ class PatternChartWidget extends StatelessWidget {
                         });
                         return sortedEvents.map((event) {
                           return _buildEventBar(event, constraints.maxWidth,
-                              constraints.maxHeight);
+                              constraints.maxHeight, context);
                         }).toList();
                       })(),
+
+                      // Белые точки посередине на каждом часу
+                      ...List.generate(24, (hour) {
+                        final left = (hour / 24) * constraints.maxWidth +
+                            (constraints.maxWidth / 24) / 2 -
+                            2;
+                        return Positioned(
+                          left: left,
+                          top: constraints.maxHeight / 2 - 2,
+                          child: Container(
+                            width: 4,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: context.appColors.textSecondaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        );
+                      }),
                     ],
                   );
                 },
@@ -94,8 +94,8 @@ class PatternChartWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildEventBar(
-      Map<String, dynamic> event, double totalWidth, double totalHeight) {
+  Widget _buildEventBar(Map<String, dynamic> event, double totalWidth,
+      double totalHeight, BuildContext context) {
     final startMinuteOfDay = event['startMinuteOfDay'] as int;
     final endMinuteOfDay = event['endMinuteOfDay'] as int;
     final color = event['color'] as Color;
@@ -134,8 +134,11 @@ class PatternChartWidget extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(4),
-          border:
-              hasEndTime ? null : Border.all(color: Colors.white30, width: 1),
+          border: hasEndTime
+              ? null
+              : Border.all(
+                  color: context.appColors.textSecondaryColor.withOpacity(0.3),
+                  width: 1),
         ),
       ),
     );

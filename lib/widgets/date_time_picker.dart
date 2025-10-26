@@ -32,6 +32,8 @@ Future<DateTime?> showCupertinoDateTimePicker(
           ),
           Expanded(
             child: CupertinoDatePicker(
+              use24hFormat: true,
+              
               mode: CupertinoDatePickerMode.dateAndTime,
               initialDateTime: initialDateTime,
               minimumDate: DateTime.now().subtract(const Duration(days: 365)),

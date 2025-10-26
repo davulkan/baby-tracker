@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:baby_tracker/models/event.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 
 class EventCategoriesWidget extends StatelessWidget {
   final Set<EventType> selectedTypes;
@@ -18,30 +19,34 @@ class EventCategoriesWidget extends StatelessWidget {
       child: Row(
         children: [
           _buildCategoryIcon(
+            context,
             Icons.bed,
             'Сон',
-            const Color(0xFF6366F1),
+            context.appColors.sleepColor,
             EventType.sleep,
           ),
           const SizedBox(width: 16),
           _buildCategoryIcon(
+            context,
             Icons.child_care,
-            'Кормле...',
-            const Color(0xFF10B981),
+            'Кормление',
+            context.appColors.feedingColor,
             EventType.feeding,
           ),
           const SizedBox(width: 16),
           _buildCategoryIcon(
+            context,
             Icons.auto_awesome,
-            'Подгузн...',
-            const Color(0xFFF59E0B),
+            'Подгузник',
+            context.appColors.diaperColor,
             EventType.diaper,
           ),
           const SizedBox(width: 16),
           _buildCategoryIcon(
+            context,
             Icons.local_drink,
             'Бутылка',
-            const Color(0xFFEC4899),
+            context.appColors.bottleColor,
             EventType.bottle,
           ),
         ],
@@ -49,8 +54,8 @@ class EventCategoriesWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryIcon(
-      IconData icon, String label, Color color, EventType type) {
+  Widget _buildCategoryIcon(BuildContext context, IconData icon, String label,
+      Color color, EventType type) {
     final isSelected = selectedTypes.contains(type);
 
     return GestureDetector(
@@ -60,16 +65,19 @@ class EventCategoriesWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.grey[900] : Colors.grey[850],
+              color: isSelected
+                  ? context.appColors.surfaceVariantColor
+                  : context.appColors.surfaceColor,
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected ? color : Colors.grey[700]!,
+                color:
+                    isSelected ? color : context.appColors.textSecondaryColor,
                 width: 2,
               ),
             ),
             child: Icon(
               icon,
-              color: isSelected ? color : Colors.grey[600],
+              color: isSelected ? color : context.appColors.textSecondaryColor,
               size: 28,
             ),
           ),
@@ -77,9 +85,13 @@ class EventCategoriesWidget extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey[600],
-              fontSize: 12,
+              color: isSelected
+                  ? context.appColors.textPrimaryColor
+                  : context.appColors.textSecondaryColor,
+              fontSize: 10,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

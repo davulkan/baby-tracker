@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/widgets/date_time_picker.dart';
@@ -58,7 +59,8 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
 
       // Всегда можем использовать таймер, независимо от статуса события
       if (widget.event!.endedAt == null) {
-        // Активное событие
+        // Активное событие - переключаемся на режим таймера
+        _isManualMode = false;
         _activeEventId = widget.event!.id;
 
         if (widget.event!.notes != null) {
@@ -201,15 +203,15 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
             content: Text(widget.event != null
                 ? 'Кормление обновлено'
                 : 'Кормление добавлено'),
-            backgroundColor: Color(0xFF10B981),
+            backgroundColor: context.appColors.successColor,
           ),
         );
         Navigator.pop(context);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ошибка сохранения'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Ошибка сохранения'),
+            backgroundColor: context.appColors.errorColor,
           ),
         );
       }
@@ -218,7 +220,7 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Ошибка: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.appColors.errorColor,
           ),
         );
       }
@@ -372,9 +374,9 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       await _pauseFeeding();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Кормление завершено'),
-            backgroundColor: Color(0xFF10B981),
+          SnackBar(
+            content: const Text('Кормление завершено'),
+            backgroundColor: context.appColors.successColor,
           ),
         );
       }
@@ -442,10 +444,9 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   }
 
   String _formatDuration(int seconds) {
-    final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
-    final minutes = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
+    final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
     final secs = (seconds % 60).toString().padLeft(2, '0');
-    return '$hours:$minutes:$secs';
+    return '$minutes:$secs';
   }
 
   Future<void> _selectTime(BuildContext context, bool isStart) async {
@@ -465,21 +466,23 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.child_care, color: Color(0xFF10B981)),
+            Icon(Icons.child_care, color: context.appColors.successColor),
             SizedBox(width: 8),
             Text(
               widget.event != null ? 'Редактировать кормление' : 'Кормление',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                  color: Theme.of(context).appBarTheme.foregroundColor),
             ),
           ],
         ),
@@ -514,7 +517,7 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   Widget _buildModeSelector() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: context.appColors.surfaceVariantColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -544,14 +547,17 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF10B981) : Colors.transparent,
+          color:
+              isSelected ? context.appColors.successColor : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white60,
+            color: isSelected
+                ? context.appColors.textPrimaryColor
+                : context.appColors.textSecondaryColor,
             fontSize: 16,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -564,10 +570,10 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Начало',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -577,16 +583,16 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[900],
+              color: context.appColors.surfaceVariantColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF10B981)),
+              border: Border.all(color: context.appColors.successColor),
             ),
             child: Row(
               children: [
                 Text(
                   DateFormat('Сегодня, HH:mm').format(_startTime),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.appColors.textPrimaryColor,
                     fontSize: 16,
                   ),
                 ),
@@ -595,10 +601,10 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Окончание',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -608,16 +614,16 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[900],
+              color: context.appColors.surfaceVariantColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF10B981)),
+              border: Border.all(color: context.appColors.successColor),
             ),
             child: Row(
               children: [
                 Text(
                   DateFormat('Сегодня, HH:mm').format(_endTime),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.appColors.textPrimaryColor,
                     fontSize: 16,
                   ),
                 ),
@@ -646,8 +652,9 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
             ElevatedButton(
               onPressed: () => _toggleBreast(true),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _isLeftActive ? const Color(0xFF10B981) : Colors.grey[800],
+                backgroundColor: _isLeftActive
+                    ? context.appColors.successColor
+                    : context.appColors.surfaceVariantColor,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 14,
@@ -661,14 +668,14 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
                 children: [
                   Icon(
                     _isLeftActive ? Icons.pause : Icons.timer,
-                    color: Colors.white,
+                    color: context.appColors.textPrimaryColor,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     _isLeftActive ? 'Пауза' : 'Левая',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.appColors.textPrimaryColor,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -679,8 +686,9 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
             ElevatedButton(
               onPressed: () => _toggleBreast(false),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _isRightActive ? const Color(0xFF10B981) : Colors.grey[800],
+                backgroundColor: _isRightActive
+                    ? context.appColors.successColor
+                    : context.appColors.surfaceVariantColor,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 14,
@@ -694,14 +702,14 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
                 children: [
                   Icon(
                     _isRightActive ? Icons.pause : Icons.timer,
-                    color: Colors.white,
+                    color: context.appColors.textPrimaryColor,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     _isRightActive ? 'Пауза' : 'Правая',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.appColors.textPrimaryColor,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -722,7 +730,9 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
           Text(
             label,
             style: TextStyle(
-              color: isActive ? const Color(0xFF10B981) : Colors.white60,
+              color: isActive
+                  ? context.appColors.successColor
+                  : context.appColors.textSecondaryColor,
               fontSize: 16,
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
@@ -732,18 +742,22 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             decoration: BoxDecoration(
               color: isActive
-                  ? const Color(0xFF10B981).withOpacity(0.2)
-                  : Colors.grey[900],
+                  ? context.appColors.successColor.withOpacity(0.2)
+                  : context.appColors.surfaceVariantColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isActive ? const Color(0xFF10B981) : Colors.grey[800]!,
+                color: isActive
+                    ? context.appColors.successColor
+                    : context.appColors.surfaceVariantColor,
                 width: 2,
               ),
             ),
             child: Text(
               _formatDuration(seconds),
               style: TextStyle(
-                color: isActive ? const Color(0xFF10B981) : Colors.white60,
+                color: isActive
+                    ? context.appColors.successColor
+                    : context.appColors.textSecondaryColor,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
@@ -769,7 +783,7 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey[900],
+            color: context.appColors.surfaceVariantColor,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -808,14 +822,17 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF10B981) : Colors.transparent,
+          color:
+              isSelected ? context.appColors.successColor : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white60,
+            color: isSelected
+                ? context.appColors.textPrimaryColor
+                : context.appColors.textSecondaryColor,
             fontSize: 16,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -828,10 +845,10 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Комментарий',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -839,12 +856,12 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
         TextField(
           controller: _notesController,
           maxLines: 3,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: context.appColors.textPrimaryColor),
           decoration: InputDecoration(
             hintText: 'Ваш комментарий',
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+            hintStyle: TextStyle(color: context.appColors.textHintColor),
             filled: true,
-            fillColor: Colors.grey[900],
+            fillColor: context.appColors.surfaceVariantColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -859,26 +876,26 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
     return ElevatedButton(
       onPressed: _isSaving ? null : _saveToFirestore,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF10B981),
+        backgroundColor: context.appColors.successColor,
         padding: const EdgeInsets.all(20),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        disabledBackgroundColor: Colors.grey[700],
+        disabledBackgroundColor: context.appColors.surfaceVariantColor,
       ),
       child: _isSaving
-          ? const SizedBox(
+          ? SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
-                color: Colors.white,
+                color: context.appColors.textPrimaryColor,
                 strokeWidth: 2,
               ),
             )
           : Text(
               widget.event != null ? 'Обновить' : 'Сохранить',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.appColors.textPrimaryColor,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),

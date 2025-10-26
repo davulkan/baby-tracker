@@ -1,14 +1,15 @@
+// lib/screens/home/widgets/home_events_sliver_list.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/event.dart';
-import 'package:baby_tracker/models/feeding_details.dart';
+import 'package:baby_tracker/screens/home/widgets/event_item.dart';
 import 'package:baby_tracker/screens/add_sleep_screen.dart';
 import 'package:baby_tracker/screens/add_feeding_screen.dart';
 import 'package:baby_tracker/screens/add_diaper_screen.dart';
 import 'package:baby_tracker/screens/add_bottle_screen.dart';
-import 'package:baby_tracker/screens/home/widgets/live_timer_widget.dart';
 
 class HomeEventsSliverList extends StatelessWidget {
   const HomeEventsSliverList({super.key});
@@ -23,10 +24,10 @@ class HomeEventsSliverList extends StatelessWidget {
           return SliverToBoxAdapter(
             child: Container(
               height: 200,
-              child: const Center(
+              child: Center(
                 child: Text(
                   'Добавьте профиль ребенка',
-                  style: TextStyle(color: Colors.white60),
+                  style: TextStyle(color: context.appColors.textSecondaryColor),
                 ),
               ),
             ),
@@ -37,12 +38,12 @@ class HomeEventsSliverList extends StatelessWidget {
           stream: eventsProvider.getEventsStream(baby.id),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SliverToBoxAdapter(
+              return SliverToBoxAdapter(
                 child: SizedBox(
                   height: 200,
                   child: Center(
                     child: CircularProgressIndicator(
-                      color: Color(0xFF6366F1),
+                      color: context.appColors.primaryAccent,
                     ),
                   ),
                 ),
@@ -56,7 +57,7 @@ class HomeEventsSliverList extends StatelessWidget {
                   child: Center(
                     child: Text(
                       'Ошибка загрузки событий',
-                      style: TextStyle(color: Colors.red[300]),
+                      style: TextStyle(color: context.appColors.errorColor),
                     ),
                   ),
                 ),
@@ -74,13 +75,13 @@ class HomeEventsSliverList extends StatelessWidget {
                         Icon(
                           Icons.event_note,
                           size: 60,
-                          color: Colors.grey[700],
+                          color: context.appColors.textSecondaryColor,
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'Нет событий',
                           style: TextStyle(
-                            color: Colors.grey[600],
+                            color: context.appColors.textSecondaryColor,
                             fontSize: 16,
                           ),
                         ),
@@ -88,7 +89,7 @@ class HomeEventsSliverList extends StatelessWidget {
                         Text(
                           'Нажмите "+" чтобы добавить',
                           style: TextStyle(
-                            color: Colors.grey[700],
+                            color: context.appColors.textSecondaryColor,
                             fontSize: 14,
                           ),
                         ),
@@ -154,14 +155,16 @@ class HomeEventsSliverList extends StatelessWidget {
         return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: Colors.grey[900],
-            title: const Text(
+            backgroundColor: Theme.of(context).dialogBackgroundColor,
+            title: Text(
               'Удалить событие?',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                  color: Theme.of(context).textTheme.titleLarge?.color),
             ),
-            content: const Text(
+            content: Text(
               'Это действие нельзя отменить',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyMedium?.color),
             ),
             actions: [
               TextButton(
@@ -170,9 +173,9 @@ class HomeEventsSliverList extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
+                child: Text(
                   'Удалить',
-                  style: TextStyle(color: Colors.red),
+                  style: TextStyle(color: context.appColors.errorColor),
                 ),
               ),
             ],
@@ -196,7 +199,6 @@ class HomeEventsSliverList extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Ошибка удаления события'),
-                  backgroundColor: Colors.red,
                   duration: Duration(seconds: 2),
                 ),
               );
@@ -207,7 +209,6 @@ class HomeEventsSliverList extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Ошибка удаления события'),
-                backgroundColor: Colors.red,
                 duration: Duration(seconds: 2),
               ),
             );
@@ -218,12 +219,12 @@ class HomeEventsSliverList extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: Colors.red,
+          color: context.appColors.errorColor,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.delete,
-          color: Colors.white,
+          color: context.appColors.textPrimaryColor,
           size: 32,
         ),
       ),
@@ -266,287 +267,7 @@ class HomeEventsSliverList extends StatelessWidget {
               break;
           }
         },
-        child: _buildEventItemFromEvent(event),
-      ),
-    );
-  }
-
-  Widget _buildEventItemFromEvent(Event event) {
-    if (event.eventType == EventType.feeding) {
-      return _buildFeedingEventItem(event);
-    }
-
-    IconData icon;
-    String title;
-    String subtitle;
-    Color color;
-    String? duration;
-
-    switch (event.eventType) {
-      case EventType.sleep:
-        icon = Icons.bed;
-        title = 'Сон';
-        color = const Color(0xFF6366F1);
-        if (event.endedAt != null) {
-          final dur = event.duration!;
-          duration = '${dur.inHours}ч ${dur.inMinutes % 60}м';
-          subtitle =
-              '${_formatTime(event.startedAt)} - ${_formatTime(event.endedAt!)}';
-        } else {
-          subtitle = '${_formatTime(event.startedAt)} - Сейчас';
-          duration = null;
-        }
-        break;
-
-      case EventType.feeding:
-        icon = Icons.child_care;
-        title = 'Кормление';
-        color = const Color(0xFF10B981);
-        if (event.endedAt != null) {
-          final dur = event.duration!;
-          subtitle = '${_formatTime(event.startedAt)}, ${dur.inMinutes} мин';
-        } else {
-          subtitle = '${_formatTime(event.startedAt)} - Сейчас';
-        }
-        break;
-
-      case EventType.diaper:
-        icon = Icons.auto_awesome;
-        title = 'Подгузник';
-        color = const Color(0xFFF59E0B);
-        subtitle = _formatTime(event.startedAt);
-        break;
-
-      case EventType.bottle:
-        icon = Icons.local_drink;
-        title = 'Бутылка';
-        color = const Color(0xFFEC4899);
-        subtitle = _formatTime(event.startedAt);
-        break;
-
-      default:
-        icon = Icons.event;
-        title = 'Событие';
-        color = Colors.grey;
-        subtitle = _formatTime(event.startedAt);
-    }
-
-    return _buildEventItem(
-      event: event,
-      icon: icon,
-      title: title,
-      subtitle: subtitle,
-      duration: duration,
-      color: color,
-    );
-  }
-
-  Widget _buildFeedingEventItem(Event event) {
-    return Consumer<EventsProvider>(
-      builder: (context, eventsProvider, child) {
-        return FutureBuilder<FeedingDetails?>(
-          future: eventsProvider.getFeedingDetails(event.id),
-          builder: (context, snapshot) {
-            String breastInfo = '';
-
-            if (snapshot.hasData && snapshot.data != null) {
-              final details = snapshot.data!;
-
-              if (event.endedAt == null) {
-                // Для активных событий показываем активную грудь
-                switch (details.activeState) {
-                  case FeedingActiveState.left:
-                    breastInfo = 'Левая грудь';
-                    break;
-                  case FeedingActiveState.right:
-                    breastInfo = 'Правая грудь';
-                    break;
-                  case FeedingActiveState.none:
-                    break;
-                }
-              } else {
-                // Для завершенных событий показываем порядок груди
-                if (details.firstBreast != null &&
-                    details.secondBreast != null) {
-                  final first =
-                      details.firstBreast == BreastSide.left ? 'Л' : 'П';
-                  final second =
-                      details.secondBreast == BreastSide.left ? 'Л' : 'П';
-                  breastInfo = '$first → $second';
-                } else if (details.firstBreast != null) {
-                  final breast = details.firstBreast == BreastSide.left
-                      ? 'Левая'
-                      : 'Правая';
-                  breastInfo = '$breast грудь';
-                }
-              }
-            }
-
-            String title = 'Кормление грудью';
-            String subtitle;
-
-            if (event.endedAt != null) {
-              final dur = event.duration!;
-              subtitle =
-                  '${_formatTime(event.startedAt)}, ${dur.inMinutes} мин';
-            } else {
-              subtitle = '${_formatTime(event.startedAt)} - Сейчас';
-            }
-
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.child_care,
-                      color: Color(0xFF10B981),
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (breastInfo.isNotEmpty)
-                          Text(
-                            breastInfo,
-                            style: const TextStyle(
-                              color: Color(0xFF10B981),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            color: Colors.white60,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (event.endedAt == null) ...[
-                    const SizedBox(width: 8),
-                    LiveTimerWidget(
-                      event: event,
-                      color: const Color(0xFF10B981),
-                    ),
-                  ],
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-  }
-
-  Widget _buildEventItem({
-    Event? event,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    String? duration,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          if (duration != null ||
-              (event != null &&
-                  event.endedAt == null &&
-                  (event.eventType == EventType.sleep)))
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: event != null &&
-                      event.endedAt == null &&
-                      event.eventType == EventType.sleep
-                  ? LiveTimerWidget(
-                      event: event,
-                      color: color,
-                    )
-                  : Text(
-                      duration!,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-        ],
+        child: EventItem(event: event),
       ),
     );
   }
@@ -573,14 +294,14 @@ class _DateHeaderDelegate extends SliverPersistentHeaderDelegate {
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: Colors.black, // Фон, чтобы прилипал
+      color: Theme.of(context).scaffoldBackgroundColor, // Фон, чтобы прилипал
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
       alignment: Alignment.center,
       child: Text(
         _formatDateHeader(date),
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: context.appColors.textPrimaryColor,
           fontSize: 16,
           fontWeight: FontWeight.bold,
         ),
@@ -604,12 +325,15 @@ String _formatDateHeader(DateTime date) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final yesterday = today.subtract(const Duration(days: 1));
+  final preYesterday = today.subtract(const Duration(days: 2));
   final eventDate = DateTime(date.year, date.month, date.day);
 
   if (eventDate == today) {
     return 'Сегодня';
   } else if (eventDate == yesterday) {
     return 'Вчера';
+  } else if (eventDate == preYesterday) {
+    return 'Позавчера';
   } else {
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}';
   }

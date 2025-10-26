@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/screens/add_sleep_screen.dart';
 import 'package:baby_tracker/screens/add_feeding_screen.dart';
@@ -24,31 +25,8 @@ class HomeQuickActions extends StatelessWidget {
         return StreamBuilder<List<Event>>(
           stream: eventsProvider.getTodayEventsStream(baby.id),
           builder: (context, snapshot) {
-            final events = snapshot.data ?? [];
-
-            final sleepCount =
-                events.where((e) => e.eventType == EventType.sleep).length;
-            final feedingCount =
-                events.where((e) => e.eventType == EventType.feeding).length;
-            final diaperCount =
-                events.where((e) => e.eventType == EventType.diaper).length;
-            final bottleCount =
-                events.where((e) => e.eventType == EventType.bottle).length;
-
-            final lastSleep =
-                events.where((e) => e.eventType == EventType.sleep).firstOrNull;
-            final lastFeeding = events
-                .where((e) => e.eventType == EventType.feeding)
-                .firstOrNull;
-            final lastDiaper = events
-                .where((e) => e.eventType == EventType.diaper)
-                .firstOrNull;
-            final lastBottle = events
-                .where((e) => e.eventType == EventType.bottle)
-                .firstOrNull;
-
             return SizedBox(
-              height: 120,
+              height: 90,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -57,9 +35,7 @@ class HomeQuickActions extends StatelessWidget {
                     context,
                     icon: Icons.bed,
                     label: 'Сон',
-                    sublabel: _getTimeSinceLabel(lastSleep),
-                    count: sleepCount.toString(),
-                    color: const Color(0xFF6366F1),
+                    color: context.appColors.secondaryAccent,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -73,9 +49,7 @@ class HomeQuickActions extends StatelessWidget {
                     context,
                     icon: Icons.child_care,
                     label: 'Кормление',
-                    sublabel: _getTimeSinceLabel(lastFeeding),
-                    count: feedingCount.toString(),
-                    color: const Color(0xFF10B981),
+                    color: context.appColors.successColor,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -89,9 +63,7 @@ class HomeQuickActions extends StatelessWidget {
                     context,
                     icon: Icons.local_drink,
                     label: 'Бутылка',
-                    sublabel: _getTimeSinceLabel(lastBottle),
-                    count: bottleCount.toString(),
-                    color: const Color(0xFFEC4899),
+                    color: context.appColors.errorColor,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -105,9 +77,7 @@ class HomeQuickActions extends StatelessWidget {
                     context,
                     icon: Icons.auto_awesome,
                     label: 'Подгузник',
-                    sublabel: _getTimeSinceLabel(lastDiaper),
-                    count: diaperCount.toString(),
-                    color: const Color(0xFFF59E0B),
+                    color: context.appColors.primaryAccent,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -126,116 +96,76 @@ class HomeQuickActions extends StatelessWidget {
     );
   }
 
-  String _getTimeSinceLabel(Event? event) {
-    if (event == null) return 'Нет данных';
-
-    final now = DateTime.now();
-    final diff = now.difference(event.startedAt);
-
-    if (event.endedAt == null) {
-      return 'Сейчас';
-    } else if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} мин назад';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours} ч назад';
-    } else {
-      return '${diff.inDays} дн назад';
-    }
-  }
-
   Widget _buildQuickActionButton(
     BuildContext context, {
     required IconData icon,
     required String label,
-    required String sublabel,
-    required String count,
     required Color color,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 105,
-        height: 120,
-        decoration: BoxDecoration(
-          color: Colors.grey[900],
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Stack(
+        width: 72,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  count,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: color.withOpacity(0.2),
+                  width: 1,
                 ),
               ),
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: color,
-                  size: 32,
-                ),
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  sublabel,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
-            Positioned(
-              bottom: 6,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[850],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.add,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    icon,
                     color: color,
-                    size: 14,
+                    size: 24,
                   ),
-                ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: context.appColors.surfaceColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: color,
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.add,
+                        size: 12,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: context.appColors.textPrimaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.1,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

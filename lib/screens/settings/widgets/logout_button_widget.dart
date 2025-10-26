@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 
 class LogoutButtonWidget extends StatelessWidget {
   final VoidCallback onPressed;
@@ -13,21 +14,21 @@ class LogoutButtonWidget extends StatelessWidget {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red,
+        backgroundColor: context.appColors.errorColor,
         padding: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      child: const Row(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.logout, color: Colors.white),
-          SizedBox(width: 8),
+          Icon(Icons.logout, color: context.appColors.textPrimaryColor),
+          const SizedBox(width: 8),
           Text(
             'Выйти из аккаунта',
             style: TextStyle(
-              color: Colors.white,
+              color: context.appColors.textPrimaryColor,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),

@@ -3,12 +3,10 @@ import 'package:baby_tracker/providers/auth_provider.dart';
 
 class UserProfileWidget extends StatelessWidget {
   final AuthProvider authProvider;
-  final VoidCallback onEditProfile;
 
   const UserProfileWidget({
     super.key,
     required this.authProvider,
-    required this.onEditProfile,
   });
 
   @override
@@ -59,15 +57,7 @@ class UserProfileWidget extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.edit,
-                color: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.color
-                    ?.withOpacity(0.7)),
-            onPressed: onEditProfile,
-          ),
+         
         ],
       ),
     );

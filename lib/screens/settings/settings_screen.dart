@@ -42,7 +42,6 @@ class SettingsScreen extends StatelessWidget {
           // Профиль пользователя
           UserProfileWidget(
             authProvider: authProvider,
-            onEditProfile: () => _showEditProfileDialog(context, authProvider),
           ),
 
           const SizedBox(height: 32),
@@ -134,7 +133,7 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.delete_forever,
             title: 'Удалить все данные',
             subtitle: 'Безвозвратное удаление',
-            textColor: Colors.red,
+            textColor: context.appColors.errorColor,
             onTap: () {
               _showDeleteDataDialog(context, authProvider);
             },
@@ -180,14 +179,16 @@ class SettingsScreen extends StatelessWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
           'Выход',
-          style: TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
         ),
-        content: const Text(
+        content: Text(
           'Вы уверены, что хотите выйти?',
-          style: TextStyle(color: Colors.white70),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
         ),
         actions: [
           TextButton(
@@ -196,9 +197,9 @@ class SettingsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
+            child: Text(
               'Выйти',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: context.appColors.errorColor),
             ),
           ),
         ],
@@ -217,14 +218,16 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
           'Удалить все данные?',
-          style: TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
         ),
-        content: const Text(
+        content: Text(
           'Это действие невозможно отменить. Все данные о ребенке будут удалены навсегда.',
-          style: TextStyle(color: Colors.white70),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
         ),
         actions: [
           TextButton(
@@ -236,9 +239,9 @@ class SettingsScreen extends StatelessWidget {
               Navigator.pop(context);
               await _deleteAllData(context, authProvider);
             },
-            child: const Text(
+            child: Text(
               'Удалить',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: context.appColors.errorColor),
             ),
           ),
         ],
@@ -251,30 +254,35 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
           'Настройки уведомлений',
-          style: TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildSwitchTile(
+              context,
               title: 'Уведомления о кормлении',
               value: true,
               onChanged: (value) {},
             ),
             _buildSwitchTile(
+              context,
               title: 'Уведомления о сне',
               value: true,
               onChanged: (value) {},
             ),
             _buildSwitchTile(
+              context,
               title: 'Уведомления о подгузниках',
               value: false,
               onChanged: (value) {},
             ),
             _buildSwitchTile(
+              context,
               title: 'Напоминания',
               value: true,
               onChanged: (value) {},
@@ -388,17 +396,19 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
           'Выбор языка',
-          style: TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title:
-                  const Text('Русский', style: TextStyle(color: Colors.white)),
+              title: Text('Русский',
+                  style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge?.color)),
               trailing: Radio<String>(
                 value: 'ru',
                 groupValue: 'ru',
@@ -406,8 +416,9 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
             ListTile(
-              title: const Text('English',
-                  style: TextStyle(color: Colors.white70)),
+              title: Text('English',
+                  style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyMedium?.color)),
               trailing: Radio<String>(
                 value: 'en',
                 groupValue: 'ru',
@@ -430,15 +441,17 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
           'Экспорт данных',
-          style: TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
         ),
-        content: const Text(
+        content: Text(
           'Функция экспорта данных будет доступна в следующем обновлении. '
           'Все данные хранятся в облаке и синхронизируются между устройствами.',
-          style: TextStyle(color: Colors.white70),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
         ),
         actions: [
           TextButton(
@@ -471,9 +484,10 @@ class SettingsScreen extends StatelessWidget {
       if (context.mounted) {
         Navigator.pop(context); // Закрываем индикатор
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Функция будет доступна в следующем обновлении'),
-            backgroundColor: Colors.orange,
+          SnackBar(
+            content:
+                const Text('Функция будет доступна в следующем обновлении'),
+            backgroundColor: context.appColors.warningColor,
           ),
         );
       }
@@ -481,9 +495,9 @@ class SettingsScreen extends StatelessWidget {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ошибка при удалении данных'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Ошибка при удалении данных'),
+            backgroundColor: context.appColors.errorColor,
           ),
         );
       }
@@ -494,12 +508,13 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
           'Политика конфиденциальности',
-          style: TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
         ),
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Text(
             'Baby Tracker уважает вашу конфиденциальность.\n\n'
             'Мы собираем только необходимую информацию для работы приложения:\n'
@@ -508,7 +523,8 @@ class SettingsScreen extends StatelessWidget {
             '• События и записи для синхронизации\n\n'
             'Все данные шифруются и хранятся в Firebase.\n'
             'Мы не передаем данные третьим лицам.',
-            style: TextStyle(color: Colors.white70),
+            style:
+                TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
           ),
         ),
         actions: [
@@ -525,12 +541,13 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
           'Условия использования',
-          style: TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
         ),
-        content: const SingleChildScrollView(
+        content: SingleChildScrollView(
           child: Text(
             'Условия использования Baby Tracker:\n\n'
             '1. Приложение предназначено для личного использования\n'
@@ -539,7 +556,8 @@ class SettingsScreen extends StatelessWidget {
             '4. Мы не несем ответственности за медицинские решения\n'
             '5. Данные могут быть удалены при нарушении условий\n\n'
             'Используя приложение, вы соглашаетесь с условиями.',
-            style: TextStyle(color: Colors.white70),
+            style:
+                TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
           ),
         ),
         actions: [
@@ -552,76 +570,19 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showEditProfileDialog(BuildContext context, AuthProvider authProvider) {
-    final nameController = TextEditingController(
-      text: authProvider.currentUser?.displayName ?? '',
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
-          'Редактировать профиль',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Имя',
-                labelStyle: TextStyle(color: Colors.white70),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white70),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF6366F1)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Email нельзя изменить, так как он привязан к аккаунту Google',
-              style: TextStyle(color: Colors.white60, fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content:
-                      Text('Функция будет доступна в следующем обновлении'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            },
-            child: const Text('Сохранить'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSwitchTile({
+  Widget _buildSwitchTile(
+    BuildContext context, {
     required String title,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
     return SwitchListTile(
-      title: Text(title, style: const TextStyle(color: Colors.white)),
+      title: Text(title,
+          style:
+              TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
       value: value,
       onChanged: onChanged,
-      activeColor: const Color(0xFF6366F1),
+      activeColor: Theme.of(context).colorScheme.primary,
     );
   }
 
@@ -648,9 +609,9 @@ class SettingsScreen extends StatelessWidget {
 
   void _showAccessControl(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Функция будет доступна в следующем обновлении'),
-        backgroundColor: Colors.orange,
+      SnackBar(
+        content: const Text('Функция будет доступна в следующем обновлении'),
+        backgroundColor: context.appColors.warningColor,
       ),
     );
   }

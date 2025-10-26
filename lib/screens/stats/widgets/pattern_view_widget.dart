@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:baby_tracker/models/baby.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/screens/stats/widgets/event_categories_widget.dart';
 import 'package:baby_tracker/screens/stats/widgets/day_section_widget.dart';
@@ -26,11 +27,13 @@ class PatternViewWidget extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.child_care, size: 80, color: Colors.grey[700]),
+            Icon(Icons.child_care,
+                size: 80, color: context.appColors.textSecondaryColor),
             const SizedBox(height: 16),
             Text(
               'Добавьте профиль ребенка',
-              style: TextStyle(color: Colors.grey[600], fontSize: 18),
+              style: TextStyle(
+                  color: context.appColors.textSecondaryColor, fontSize: 18),
             ),
           ],
         ),
@@ -43,8 +46,9 @@ class PatternViewWidget extends StatelessWidget {
           stream: eventsProvider.getEventsStream(baby!.id),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+              return Center(
+                child: CircularProgressIndicator(
+                    color: context.appColors.secondaryAccent),
               );
             }
 
@@ -52,7 +56,7 @@ class PatternViewWidget extends StatelessWidget {
               return Center(
                 child: Text(
                   'Ошибка загрузки данных',
-                  style: TextStyle(color: Colors.red[300]),
+                  style: TextStyle(color: context.appColors.errorColor),
                 ),
               );
             }
@@ -64,16 +68,21 @@ class PatternViewWidget extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.bar_chart, size: 80, color: Colors.grey[700]),
+                    Icon(Icons.bar_chart,
+                        size: 80, color: context.appColors.textSecondaryColor),
                     const SizedBox(height: 16),
                     Text(
                       'Нет данных для статистики',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 18),
+                      style: TextStyle(
+                          color: context.appColors.textSecondaryColor,
+                          fontSize: 18),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Добавьте события для отображения паттерна',
-                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                      style: TextStyle(
+                          color: context.appColors.textSecondaryColor,
+                          fontSize: 14),
                     ),
                   ],
                 ),
@@ -94,7 +103,7 @@ class PatternViewWidget extends StatelessWidget {
                   const SizedBox(height: 32),
 
                   // Динамически генерируем секции для всех дней с данными
-                  ..._buildAllDaySections(_filterEvents(allEvents)),
+                  ..._buildAllDaySections(_filterEvents(allEvents), context),
                 ],
               ),
             );
@@ -104,7 +113,8 @@ class PatternViewWidget extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildAllDaySections(List<Event> filteredEvents) {
+  List<Widget> _buildAllDaySections(
+      List<Event> filteredEvents, BuildContext context) {
     // Группируем события по дням
     final Map<String, List<Event>> eventsByDay = {};
 
@@ -146,7 +156,7 @@ class PatternViewWidget extends StatelessWidget {
 
       sections.add(DaySectionWidget(
         title: title,
-        stats: _calculateDayStats(dayEvents, date),
+        stats: _calculateDayStats(dayEvents, date, context),
       ));
 
       // Добавляем отступ между секциями, кроме последней
@@ -172,7 +182,7 @@ class PatternViewWidget extends StatelessWidget {
   }
 
   Map<String, dynamic> _calculateDayStats(
-      List<Event> dayEvents, DateTime date) {
+      List<Event> dayEvents, DateTime date, BuildContext context) {
     final startOfDay = DateTime(date.year, date.month, date.day);
 
     // События уже отфильтрованы по дню, просто используем их
@@ -214,7 +224,7 @@ class PatternViewWidget extends StatelessWidget {
     }
 
     // Создаем данные для графика
-    final chartEvents = _createChartEvents(dayEvents, startOfDay);
+    final chartEvents = _createChartEvents(dayEvents, startOfDay, context);
 
     return {
       'sleepHours': sleepTotalMinutes ~/ 60,
@@ -231,7 +241,7 @@ class PatternViewWidget extends StatelessWidget {
   }
 
   List<Map<String, dynamic>> _createChartEvents(
-      List<Event> events, DateTime startOfDay) {
+      List<Event> events, DateTime startOfDay, BuildContext context) {
     final List<Map<String, dynamic>> chartEvents = [];
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
@@ -240,19 +250,19 @@ class PatternViewWidget extends StatelessWidget {
       Color color;
       switch (event.eventType) {
         case EventType.sleep:
-          color = const Color(0xFF6366F1);
+          color = context.appColors.sleepColor;
           break;
         case EventType.feeding:
-          color = const Color(0xFF10B981);
+          color = context.appColors.feedingColor;
           break;
         case EventType.diaper:
-          color = const Color(0xFFF59E0B);
+          color = context.appColors.diaperColor;
           break;
         case EventType.bottle:
-          color = const Color(0xFFEC4899);
+          color = context.appColors.bottleColor;
           break;
         default:
-          color = Colors.grey;
+          color = context.appColors.textSecondaryColor;
       }
 
       // Ограничиваем время начала и конца границами дня

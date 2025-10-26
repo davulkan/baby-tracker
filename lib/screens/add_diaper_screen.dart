@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/diaper_details.dart';
 import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/widgets/date_time_picker.dart';
@@ -23,6 +24,7 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
   DateTime _time = DateTime.now();
   final _notesController = TextEditingController();
   bool _isSaving = false;
+  bool _isLoading = false;
   DiaperDetails? _existingDetails;
 
   @override
@@ -32,6 +34,8 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
   }
 
   Future<void> _initializeData() async {
+    setState(() => _isLoading = true);
+
     if (widget.event != null) {
       // Загружаем данные для редактирования
       _time = widget.event!.startedAt;
@@ -48,7 +52,10 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
         _diaperType = _existingDetails!.diaperType;
       }
     }
-    setState(() {});
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -117,15 +124,15 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
             content: Text(widget.event != null
                 ? 'Подгузник обновлен'
                 : 'Подгузник добавлен'),
-            backgroundColor: Color(0xFFF59E0B),
+            backgroundColor: context.appColors.successColor,
           ),
         );
         Navigator.pop(context);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ошибка сохранения'),
-            backgroundColor: Colors.red,
+          SnackBar(
+            content: const Text('Ошибка сохранения'),
+            backgroundColor: context.appColors.errorColor,
           ),
         );
       }
@@ -134,7 +141,7 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Ошибка: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.appColors.errorColor,
           ),
         );
       }
@@ -168,32 +175,66 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
   Color _getDiaperTypeColor(DiaperType type) {
     switch (type) {
       case DiaperType.wet:
-        return const Color(0xFF3B82F6);
+        return context.appColors.diaperWetColor;
       case DiaperType.dirty:
-        return const Color(0xFF8B5CF6);
+        return context.appColors.diaperDirtyColor;
       case DiaperType.mixed:
-        return const Color(0xFFF59E0B);
+        return context.appColors.diaperMixedColor;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back,
+                color: Theme.of(context).appBarTheme.foregroundColor),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_awesome, color: context.appColors.primaryAccent),
+              SizedBox(width: 8),
+              Text(
+                widget.event != null ? 'Редактировать подгузник' : 'Подгузник',
+                style: TextStyle(
+                    color: Theme.of(context).appBarTheme.foregroundColor),
+              ),
+            ],
+          ),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: context.appColors.primaryAccent,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.auto_awesome, color: Color(0xFFF59E0B)),
+            Icon(Icons.auto_awesome, color: context.appColors.primaryAccent),
             SizedBox(width: 8),
             Text(
               widget.event != null ? 'Редактировать подгузник' : 'Подгузник',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                  color: Theme.of(context).appBarTheme.foregroundColor),
             ),
           ],
         ),
@@ -205,10 +246,10 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Время
-            const Text(
+            Text(
               'Время',
               style: TextStyle(
-                color: Colors.white,
+                color: context.appColors.textPrimaryColor,
                 fontSize: 16,
               ),
             ),
@@ -218,16 +259,16 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[900],
+                  color: context.appColors.surfaceColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFF59E0B)),
+                  border: Border.all(color: context.appColors.primaryAccent),
                 ),
                 child: Row(
                   children: [
                     Text(
                       DateFormat('Сегодня, HH:mm').format(_time),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.appColors.textPrimaryColor,
                         fontSize: 16,
                       ),
                     ),
@@ -239,10 +280,10 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
             const SizedBox(height: 32),
 
             // Тип подгузника
-            const Text(
+            Text(
               'Тип',
               style: TextStyle(
-                color: Colors.white,
+                color: context.appColors.textPrimaryColor,
                 fontSize: 16,
               ),
             ),
@@ -285,10 +326,12 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.2) : Colors.grey[900],
+          color: isSelected
+              ? color.withOpacity(0.2)
+              : context.appColors.surfaceColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? color : Colors.grey[800]!,
+            color: isSelected ? color : context.appColors.surfaceVariantColor,
             width: 2,
           ),
         ),
@@ -310,7 +353,9 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
             Text(
               _getDiaperTypeLabel(type),
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white60,
+                color: isSelected
+                    ? context.appColors.textPrimaryColor
+                    : context.appColors.textSecondaryColor,
                 fontSize: 18,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -332,10 +377,10 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Комментарий',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -343,12 +388,12 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
         TextField(
           controller: _notesController,
           maxLines: 3,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: context.appColors.textPrimaryColor),
           decoration: InputDecoration(
             hintText: 'Ваш комментарий',
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+            hintStyle: TextStyle(color: context.appColors.textHintColor),
             filled: true,
-            fillColor: Colors.grey[900],
+            fillColor: context.appColors.surfaceColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -363,26 +408,26 @@ class _AddDiaperScreenState extends State<AddDiaperScreen> {
     return ElevatedButton(
       onPressed: _isSaving ? null : _saveToFirestore,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFF59E0B),
+        backgroundColor: context.appColors.primaryAccent,
         padding: const EdgeInsets.all(20),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        disabledBackgroundColor: Colors.grey[700],
+        disabledBackgroundColor: context.appColors.surfaceVariantColor,
       ),
       child: _isSaving
-          ? const SizedBox(
+          ? SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
-                color: Colors.white,
+                color: context.appColors.textPrimaryColor,
                 strokeWidth: 2,
               ),
             )
           : Text(
               widget.event != null ? 'Обновить' : 'Сохранить',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.appColors.textPrimaryColor,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),

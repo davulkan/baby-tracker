@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/sleep_details.dart';
 import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/widgets/date_time_picker.dart';
@@ -25,6 +26,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
   DateTime _startTime = DateTime.now();
   DateTime _endTime = DateTime.now();
   final _notesController = TextEditingController();
+  bool _isLoading = false;
   SleepDetails? _existingDetails;
 
   // Для таймера
@@ -38,7 +40,14 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     _initializeData();
   }
 
+  bool _isDaySleep(DateTime time) {
+    int hour = time.hour;
+    return hour >= 9 && hour < 21; // 9 утра до 9 вечера - дневной
+  }
+
   Future<void> _initializeData() async {
+    setState(() => _isLoading = true);
+
     final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
 
     if (widget.event != null) {
@@ -66,11 +75,20 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
       _existingDetails = await eventsProvider.getSleepDetails(widget.event!.id);
       if (_existingDetails != null) {
         _isDayMode = _existingDetails!.sleepType == SleepType.day;
+      } else {
+        // Если деталей нет, определяем по времени начала
+        _isDayMode = _isDaySleep(_startTime);
       }
+    } else {
+      // Новое событие - определяем тип по текущему времени
+      _isDayMode = _isDaySleep(DateTime.now());
     }
     // Убираем логику автоматического переключения в активный таймер
     // Пользователь должен иметь возможность создавать новые события независимо от активных
-    setState(() {});
+
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   void _startLocalTimer() {
@@ -107,6 +125,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     setState(() {
       _isTimerRunning = true;
       _startTime = DateTime.now();
+      _isDayMode = _isDaySleep(_startTime);
     });
 
     // Создаем событие в Firestore
@@ -154,6 +173,19 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           : _notesController.text.trim(),
     );
 
+    if (success) {
+      // Создаем детали сна
+      final sleepDetails = SleepDetails(
+        id: '',
+        eventId: _activeEventId!,
+        sleepType: _isDayMode ? SleepType.day : SleepType.night,
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+      );
+      await eventsProvider.updateSleepDetails(_activeEventId!, sleepDetails);
+    }
+
     setState(() {
       _isTimerRunning = false;
       _endTime = endTime;
@@ -190,6 +222,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
       setState(() {
         if (isStart) {
           _startTime = selected;
+          _isDayMode = _isDaySleep(_startTime);
         } else {
           _endTime = selected;
         }
@@ -202,22 +235,56 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     final isTimerModeAvailable =
         widget.event == null || widget.event!.endedAt == null;
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back,
+                color: Theme.of(context).appBarTheme.foregroundColor),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.bed, color: context.appColors.secondaryAccent),
+              SizedBox(width: 8),
+              Text(
+                widget.event != null ? 'Редактировать сон' : 'Сон',
+                style: TextStyle(
+                    color: Theme.of(context).appBarTheme.foregroundColor),
+              ),
+            ],
+          ),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: CircularProgressIndicator(
+            color: context.appColors.secondaryAccent,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.bed, color: Color(0xFF6366F1)),
+            Icon(Icons.bed, color: context.appColors.secondaryAccent),
             SizedBox(width: 8),
             Text(
               widget.event != null ? 'Редактировать сон' : 'Сон',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                  color: Theme.of(context).appBarTheme.foregroundColor),
             ),
           ],
         ),
@@ -256,7 +323,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
   Widget _buildModeSelector() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[900],
+        color: context.appColors.surfaceVariantColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -286,14 +353,18 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6366F1) : Colors.transparent,
+          color: isSelected
+              ? context.appColors.secondaryAccent
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white60,
+            color: isSelected
+                ? context.appColors.textPrimaryColor
+                : context.appColors.textSecondaryColor,
             fontSize: 16,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -306,10 +377,10 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Начало',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -319,16 +390,16 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[900],
+              color: context.appColors.surfaceVariantColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF6366F1)),
+              border: Border.all(color: context.appColors.secondaryAccent),
             ),
             child: Row(
               children: [
                 Text(
                   DateFormat('Сегодня, HH:mm').format(_startTime),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.appColors.textPrimaryColor,
                     fontSize: 16,
                   ),
                 ),
@@ -337,10 +408,10 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Окончание',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -350,16 +421,16 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[900],
+              color: context.appColors.surfaceVariantColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF6366F1)),
+              border: Border.all(color: context.appColors.secondaryAccent),
             ),
             child: Row(
               children: [
                 Text(
                   DateFormat('Сегодня, HH:mm').format(_endTime),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.appColors.textPrimaryColor,
                     fontSize: 16,
                   ),
                 ),
@@ -376,8 +447,8 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
       children: [
         Text(
           _formatDuration(),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.appColors.textPrimaryColor,
             fontSize: 48,
             fontWeight: FontWeight.bold,
           ),
@@ -386,7 +457,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
         ElevatedButton.icon(
           onPressed: _isTimerRunning ? _stopTimer : _startTimer,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6366F1),
+            backgroundColor: context.appColors.secondaryAccent,
             padding: const EdgeInsets.symmetric(
               horizontal: 32,
               vertical: 16,
@@ -397,12 +468,12 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           ),
           icon: Icon(
             _isTimerRunning ? Icons.stop : Icons.play_arrow,
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
           ),
           label: Text(
             _isTimerRunning ? 'Остановить' : 'Заснул',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.appColors.textPrimaryColor,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -416,17 +487,17 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Сон',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey[900],
+            color: context.appColors.surfaceVariantColor,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -459,14 +530,18 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6366F1) : Colors.transparent,
+          color: isSelected
+              ? context.appColors.secondaryAccent
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white60,
+            color: isSelected
+                ? context.appColors.textPrimaryColor
+                : context.appColors.textSecondaryColor,
             fontSize: 16,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -479,10 +554,10 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Комментарий',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -490,12 +565,12 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
         TextField(
           controller: _notesController,
           maxLines: 3,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: context.appColors.textPrimaryColor),
           decoration: InputDecoration(
             hintText: 'Ваш комментарий',
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+            hintStyle: TextStyle(color: context.appColors.textHintColor),
             filled: true,
-            fillColor: Colors.grey[900],
+            fillColor: context.appColors.surfaceVariantColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -516,9 +591,10 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
                   final baby = babyProvider.currentBaby;
                   if (baby == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Ошибка: профиль ребенка не найден'),
-                        backgroundColor: Colors.red,
+                      SnackBar(
+                        content:
+                            const Text('Ошибка: профиль ребенка не найден'),
+                        backgroundColor: context.appColors.errorColor,
                       ),
                     );
                     return;
@@ -594,7 +670,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
                         content: Text(widget.event != null
                             ? 'Сон обновлен'
                             : 'Сон добавлен'),
-                        backgroundColor: Color(0xFF10B981),
+                        backgroundColor: context.appColors.successColor,
                       ),
                     );
                     Navigator.pop(context);
@@ -607,31 +683,31 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
                                   ? 'Ошибка обновления сна'
                                   : 'Ошибка добавления сна'),
                         ),
-                        backgroundColor: Colors.red,
+                        backgroundColor: context.appColors.errorColor,
                       ),
                     );
                   }
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6366F1),
+            backgroundColor: context.appColors.secondaryAccent,
             padding: const EdgeInsets.all(20),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
           child: eventsProvider.isLoading
-              ? const SizedBox(
+              ? SizedBox(
                   height: 20,
                   width: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: context.appColors.textPrimaryColor,
                   ),
                 )
               : Text(
                   widget.event != null ? 'Обновить' : 'Сохранить',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.appColors.textPrimaryColor,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),

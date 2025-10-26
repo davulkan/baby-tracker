@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/screens/stats/widgets/pattern_view_widget.dart';
 import 'package:baby_tracker/screens/stats/widgets/growth_view_widget.dart';
@@ -46,39 +47,39 @@ class _StatsScreenState extends State<StatsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Row(
+        title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.bar_chart, color: Color(0xFFFF8A80)),
+            Icon(Icons.bar_chart, color: context.appColors.primaryAccent),
             SizedBox(width: 8),
             Text(
               'Статистика',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).appBarTheme.foregroundColor),
             ),
           ],
         ),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFFFF8A80),
-          labelColor: const Color(0xFFFF8A80),
-          unselectedLabelColor: Colors.white60,
+          indicatorColor: context.appColors.primaryAccent,
+          labelColor: context.appColors.primaryAccent,
+          unselectedLabelColor: context.appColors.textSecondaryColor,
           tabs: const [
-            Tab(text: 'Паттерн'),
-            Tab(text: 'Вес, рост и прочее'),
+            Tab(text: 'Паттерны'),
+            Tab(text: 'Вес, рост'),
           ],
         ),
       ),
       body: !_localeInitialized
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+          ? Center(
+              child: CircularProgressIndicator(color: context.appColors.primaryAccent),
             )
           : TabBarView(
               controller: _tabController,

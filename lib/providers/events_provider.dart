@@ -23,10 +23,12 @@ class EventsProvider with ChangeNotifier {
         .collection('events')
         .where('baby_id', isEqualTo: babyId)
         .orderBy('started_at', descending: true)
-        .limit(50) // Ограничиваем для производительности
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    }).handleError((error) {
+      debugPrint('Error in getEventsStream: $error');
+      return [];
     });
   }
 
@@ -44,6 +46,9 @@ class EventsProvider with ChangeNotifier {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    }).handleError((error) {
+      debugPrint('Error in getTodayEventsStream: $error');
+      return [];
     });
   }
 
@@ -250,10 +255,10 @@ class EventsProvider with ChangeNotifier {
   // Обновление деталей сна
   Future<bool> updateSleepDetails(String eventId, SleepDetails details) async {
     try {
-      await _firestore.collection('sleep_details').doc(eventId).update({
+      await _firestore.collection('sleep_details').doc(eventId).set({
         ...details.toFirestore(),
         'last_modified_at': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       notifyListeners();
       return true;
@@ -715,6 +720,9 @@ class EventsProvider with ChangeNotifier {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    }).handleError((error) {
+      debugPrint('Error in getActiveEventsStream: $error');
+      return [];
     });
   }
 
