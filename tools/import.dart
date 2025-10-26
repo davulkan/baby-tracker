@@ -95,7 +95,7 @@ class _MigrationScreenState extends State<MigrationScreen> {
       _addLog('📂 Загрузка Realm файла из assets...');
 
       final ByteData data =
-          await rootBundle.load('assets/mybaby-default.realm');
+          await rootBundle.load('assets/mybaby26.realm');
       final List<int> bytes = data.buffer.asUint8List();
 
       _addLog('✅ Файл загружен: ${bytes.length / 1024 / 1024} MB');
