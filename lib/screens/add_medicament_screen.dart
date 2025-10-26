@@ -224,7 +224,8 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.medical_services, color: context.appColors.primaryAccent),
+              Icon(Icons.medical_services,
+                  color: context.appColors.primaryAccent),
               SizedBox(width: 8),
               Text(
                 widget.event != null ? 'Редактировать лекарство' : 'Лекарство',
@@ -255,7 +256,8 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.medical_services, color: context.appColors.primaryAccent),
+            Icon(Icons.medical_services,
+                color: context.appColors.primaryAccent),
             SizedBox(width: 8),
             Text(
               widget.event != null ? 'Редактировать лекарство' : 'Лекарство',
@@ -358,7 +360,8 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
                           icon: const Icon(Icons.add),
                           label: const Text('Добавить новое лекарство'),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: context.appColors.primaryAccent),
+                            side: BorderSide(
+                                color: context.appColors.primaryAccent),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -419,7 +422,8 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
 
   Widget _buildSaveButton() {
     return ElevatedButton(
-      onPressed: _selectedMedicineId == null || _isSaving ? null : _saveToFirestore,
+      onPressed:
+          _selectedMedicineId == null || _isSaving ? null : _saveToFirestore,
       style: ElevatedButton.styleFrom(
         backgroundColor: context.appColors.primaryAccent,
         padding: const EdgeInsets.all(20),

@@ -893,7 +893,8 @@ class EventsProvider with ChangeNotifier {
   // Получение лекарства по ID
   Future<Medicine?> getMedicine(String medicineId) async {
     try {
-      final doc = await _firestore.collection('medicines').doc(medicineId).get();
+      final doc =
+          await _firestore.collection('medicines').doc(medicineId).get();
 
       if (doc.exists) {
         return Medicine.fromFirestore(doc);
@@ -918,7 +919,8 @@ class EventsProvider with ChangeNotifier {
         createdAt: DateTime.now(),
       );
 
-      final docRef = await _firestore.collection('medicines').add(medicine.toFirestore());
+      final docRef =
+          await _firestore.collection('medicines').add(medicine.toFirestore());
       return docRef.id;
     } catch (e) {
       _error = 'Ошибка добавления лекарства';
