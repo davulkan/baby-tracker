@@ -151,6 +151,8 @@ class HomeEventsSliverList extends StatelessWidget {
     return Dismissible(
       key: ValueKey('${event.id}_${event.eventType.name}'),
       direction: DismissDirection.endToStart,
+      resizeDuration: Duration(milliseconds: 100),
+      movementDuration: Duration(milliseconds: 100),
       confirmDismiss: (direction) async {
         return await showDialog<bool>(
           context: context,
@@ -184,26 +186,7 @@ class HomeEventsSliverList extends StatelessWidget {
       },
       onDismissed: (direction) async {
         try {
-          final success =
-              await eventsProvider.deleteEvent(event.id, event.eventType);
-
-          if (context.mounted) {
-            if (success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Событие удалено'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Ошибка удаления события'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          }
+          await eventsProvider.deleteEvent(event.id, event.eventType);
         } catch (e) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

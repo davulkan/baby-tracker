@@ -326,7 +326,6 @@ class EventsProvider with ChangeNotifier {
           break;
       }
 
-      notifyListeners();
       return true;
     } catch (e) {
       _error = 'Ошибка удаления события';
