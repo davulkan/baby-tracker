@@ -33,6 +33,7 @@ dependencies:
   image_picker: ^1.1.2
   shared_preferences: ^2.3.2
   connectivity_plus: ^6.1.0
+  file_picker: ^8.1.2
 
   # Navigation
   go_router: ^14.6.2
@@ -41,7 +42,6 @@ dependencies:
   flutter_local_notifications: ^18.0.1
 
   realm: ^20.2.0
-
 
 dev_dependencies:
   flutter_test:

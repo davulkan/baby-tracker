@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:baby_tracker/screens/stats/widgets/pattern_chart_widget.dart';
 import 'package:baby_tracker/screens/stats/widgets/stats_summary_widget.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 
 class DaySectionWidget extends StatelessWidget {
   final String title;
@@ -19,8 +20,8 @@ class DaySectionWidget extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.appColors.textPrimaryColor,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),

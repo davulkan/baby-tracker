@@ -1,29 +1,13 @@
 import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:baby_tracker/firebase_options.dart';
-import 'package:realm_dart/realm.dart';
 import 'package:path_provider/path_provider.dart';
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Baby Tracker Migration',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: MigrationScreen(),
-    );
-  }
-}
+import 'package:realm/realm.dart';
+import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import '../../../providers/theme_provider.dart';
 
 class MigrationScreen extends StatefulWidget {
   @override
@@ -38,6 +22,8 @@ class _MigrationScreenState extends State<MigrationScreen> {
   int _totalProcessed = 0;
   int _totalErrors = 0;
   int _totalEvents = 0;
+  String? _selectedFilePath;
+  String _selectedFileName = 'Файл не выбран';
 
   @override
   void initState() {
@@ -47,21 +33,47 @@ class _MigrationScreenState extends State<MigrationScreen> {
 
   Future<void> _initialize() async {
     try {
-      _addLog('⏳ Инициализация Firebase...');
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      _addLog('✅ Firebase инициализирован');
-
       setState(() {
         _isInitialized = true;
-        _status = 'Готово к миграции';
+        _status = 'Выберите файл Realm для миграции';
       });
     } catch (e) {
       setState(() {
         _status = 'Ошибка инициализации: $e';
       });
       _addLog('❌ Ошибка: $e');
+    }
+  }
+
+  Future<void> _pickRealmFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final fileName = result.files.single.name;
+        final filePath = result.files.single.path!;
+
+        // Проверяем расширение файла вручную
+        if (!fileName.toLowerCase().endsWith('.realm')) {
+          _addLog(
+              '❌ Выбранный файл не является файлом Realm. Выберите файл с расширением .realm');
+          return;
+        }
+
+        setState(() {
+          _selectedFilePath = filePath;
+          _selectedFileName = fileName;
+          _status = 'Файл выбран: $_selectedFileName';
+        });
+        _addLog('📁 Выбран файл: $_selectedFileName');
+      } else {
+        _addLog('❌ Файл не выбран');
+      }
+    } catch (e) {
+      _addLog('❌ Ошибка выбора файла: $e');
     }
   }
 
@@ -74,13 +86,18 @@ class _MigrationScreenState extends State<MigrationScreen> {
 
   Future<void> _startMigration() async {
     if (!_isInitialized) {
-      _addLog('❌ Firebase не инициализирован');
+      _addLog('❌ Система не инициализирована');
+      return;
+    }
+
+    if (_selectedFilePath == null) {
+      _addLog('❌ Файл Realm не выбран');
       return;
     }
 
     setState(() {
       _isMigrating = true;
-      _status = 'Копирование Realm файла из assets...';
+      _status = 'Копирование выбранного файла Realm...';
       _logs.clear();
       _totalProcessed = 0;
       _totalErrors = 0;
@@ -90,18 +107,21 @@ class _MigrationScreenState extends State<MigrationScreen> {
     String? tempRealmPath;
 
     try {
-      // 1. Копируем Realm файл из assets во временную директорию
-      _addLog('📂 Загрузка Realm файла из assets...');
+      // 1. Копируем выбранный Realm файл во временную директорию
+      _addLog('📂 Загрузка выбранного файла: $_selectedFileName');
 
-      final ByteData data =
-          await rootBundle.load('assets/mybaby26.realm');
-      final List<int> bytes = data.buffer.asUint8List();
+      final selectedFile = File(_selectedFilePath!);
+      if (!await selectedFile.exists()) {
+        throw Exception('Выбранный файл не существует');
+      }
 
-      _addLog('✅ Файл загружен: ${bytes.length / 1024 / 1024} MB');
+      final bytes = await selectedFile.readAsBytes();
+      _addLog(
+          '✅ Файл загружен: ${(bytes.length / 1024 / 1024).toStringAsFixed(2)} MB');
 
       // 2. Сохраняем во временную директорию
       final tempDir = await getTemporaryDirectory();
-      tempRealmPath = '${tempDir.path}/mybaby.realm';
+      tempRealmPath = '${tempDir.path}/selected_realm.realm';
 
       final tempFile = File(tempRealmPath);
       await tempFile.writeAsBytes(bytes);
@@ -254,9 +274,12 @@ class _MigrationScreenState extends State<MigrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final appColors = context.appColors;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Baby Tracker Migration'),
+        title: Text('Миграция данных'),
         elevation: 2,
       ),
       body: Padding(
@@ -267,10 +290,14 @@ class _MigrationScreenState extends State<MigrationScreen> {
             // Статус
             Card(
               color: _isMigrating
-                  ? Colors.blue.shade50
+                  ? (themeProvider.isDarkMode
+                      ? Colors.blue.shade900
+                      : Colors.blue.shade50)
                   : (_totalProcessed > 0
-                      ? Colors.green.shade50
-                      : Colors.grey.shade50),
+                      ? (themeProvider.isDarkMode
+                          ? Colors.green.shade900
+                          : Colors.green.shade50)
+                      : appColors.surfaceColor),
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(
@@ -309,14 +336,17 @@ class _MigrationScreenState extends State<MigrationScreen> {
                       SizedBox(height: 8),
                       Text(
                         'Обработано: $_totalProcessed из $_totalEvents (${(_totalProcessed / _totalEvents * 100).toStringAsFixed(1)}%)',
-                        style: TextStyle(fontSize: 14),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: appColors.textSecondaryColor,
+                        ),
                       ),
                       if (_totalErrors > 0)
                         Text(
                           'Ошибок: $_totalErrors',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.red,
+                            color: appColors.errorColor,
                           ),
                         ),
                     ],
@@ -327,10 +357,59 @@ class _MigrationScreenState extends State<MigrationScreen> {
 
             SizedBox(height: 16),
 
+            // Кнопка выбора файла
+            ElevatedButton.icon(
+              onPressed: !_isMigrating ? _pickRealmFile : null,
+              icon: Icon(Icons.file_open),
+              label: Text(
+                'Выбрать файл Realm',
+                style: TextStyle(fontSize: 16),
+              ),
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.all(16),
+                backgroundColor: appColors.secondaryAccent,
+                disabledBackgroundColor: Colors.grey,
+              ),
+            ),
+
+            SizedBox(height: 8),
+
+            // Информация о выбранном файле
+            if (_selectedFilePath != null)
+              Card(
+                color: appColors.surfaceVariantColor,
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: appColors.successColor,
+                        size: 20,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Выбран: $_selectedFileName',
+                          style: TextStyle(
+                            color: appColors.textPrimaryColor,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            SizedBox(height: 16),
+
             // Кнопка миграции
             ElevatedButton.icon(
               onPressed:
-                  (_isInitialized && !_isMigrating) ? _startMigration : null,
+                  (_isInitialized && !_isMigrating && _selectedFilePath != null)
+                      ? _startMigration
+                      : null,
               icon: Icon(
                   _isMigrating ? Icons.hourglass_empty : Icons.cloud_upload),
               label: Text(
@@ -339,7 +418,7 @@ class _MigrationScreenState extends State<MigrationScreen> {
               ),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.all(16),
-                backgroundColor: Colors.green,
+                backgroundColor: appColors.successColor,
                 disabledBackgroundColor: Colors.grey,
               ),
             ),
@@ -349,6 +428,7 @@ class _MigrationScreenState extends State<MigrationScreen> {
             // Логи
             Expanded(
               child: Card(
+                color: appColors.surfaceVariantColor,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -362,6 +442,7 @@ class _MigrationScreenState extends State<MigrationScreen> {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              color: appColors.textPrimaryColor,
                             ),
                           ),
                           if (_logs.isNotEmpty)
@@ -371,19 +452,28 @@ class _MigrationScreenState extends State<MigrationScreen> {
                                   _logs.clear();
                                 });
                               },
-                              icon: Icon(Icons.clear, size: 16),
-                              label: Text('Очистить'),
+                              icon: Icon(
+                                Icons.clear,
+                                size: 16,
+                                color: appColors.textSecondaryColor,
+                              ),
+                              label: Text(
+                                'Очистить',
+                                style: TextStyle(
+                                    color: appColors.textSecondaryColor),
+                              ),
                             ),
                         ],
                       ),
                     ),
-                    Divider(height: 1),
+                    Divider(height: 1, color: appColors.textHintColor),
                     Expanded(
                       child: _logs.isEmpty
                           ? Center(
                               child: Text(
                                 'Логи появятся здесь',
-                                style: TextStyle(color: Colors.grey),
+                                style:
+                                    TextStyle(color: appColors.textHintColor),
                               ),
                             )
                           : ListView.builder(
@@ -397,6 +487,7 @@ class _MigrationScreenState extends State<MigrationScreen> {
                                     style: TextStyle(
                                       fontFamily: 'monospace',
                                       fontSize: 13,
+                                      color: appColors.textPrimaryColor,
                                     ),
                                   ),
                                 );
@@ -505,7 +596,8 @@ String parseString(RealmObject obj, String field, [String defaultValue = '']) {
 
 bool parseBool(RealmObject obj, String field, [bool defaultValue = false]) {
   try {
-    return obj.dynamic.get<bool>(field) ?? defaultValue;
+    final value = obj.dynamic.get<bool?>(field);
+    return value ?? defaultValue;
   } catch (e) {
     return defaultValue;
   }
@@ -513,7 +605,8 @@ bool parseBool(RealmObject obj, String field, [bool defaultValue = false]) {
 
 int parseInt(RealmObject obj, String field, [int defaultValue = 0]) {
   try {
-    return obj.dynamic.get<int>(field) ?? defaultValue;
+    final value = obj.dynamic.get<int?>(field);
+    return value ?? defaultValue;
   } catch (e) {
     return defaultValue;
   }
@@ -524,8 +617,6 @@ Future<void> cleanupMigratedData(FirebaseFirestore firestore) async {
   print('🧹 Очистка существующих данных с флагом migrated = true...');
 
   try {
-
-
     // Очищаем события
     final eventsQuery = await firestore
         .collection('events')
@@ -614,6 +705,7 @@ Future<void> _cleanupCollection(FirebaseFirestore firestore, String collection,
 
   print('  ✅ Коллекция $collection очищена');
 }
+
 Future<Map<String, dynamic>> createMainEvent(RealmObject realmEvent,
     String eventId, String eventType, DateTime enteredDate) async {
   final leftStart = parseNullableDateTime(realmEvent, 'leftStart');

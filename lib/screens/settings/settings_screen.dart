@@ -1,4 +1,5 @@
 // lib/screens/settings_screen.dart
+import 'package:baby_tracker/screens/settings/widgets/migration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -121,6 +122,19 @@ class SettingsScreen extends StatelessWidget {
 
           // Секция "Данные"
           SettingsSectionWidget(title: 'Данные'),
+          SettingItemWidget(
+            icon: Icons.sync,
+            title: 'Залить данные из бэкапа',
+            subtitle: 'Миграция ваших данных из бэкапа My baby',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MigrationScreen(),
+                ),
+              );
+            },
+          ),
           SettingItemWidget(
             icon: Icons.backup,
             title: 'Экспорт данных',

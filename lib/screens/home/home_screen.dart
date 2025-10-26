@@ -29,29 +29,29 @@ class HomeScreenFull extends StatelessWidget {
                     elevation: 0,
                     flexibleSpace: const HomeTopBar(),
                   ),
-                  SliverToBoxAdapter(
+                  const SliverToBoxAdapter(
                     child: SizedBox(height: 16),
                   ),
-                  SliverToBoxAdapter(
+                  const SliverToBoxAdapter(
                     child: HomeQuickActions(),
                   ),
-                  SliverToBoxAdapter(
+                  const SliverToBoxAdapter(
                     child: SizedBox(height: 20),
                   ),
-                  HomeEventsSliverList(),
+                  const HomeEventsSliverList(),
                 ],
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          HomeAddEventDialog.show(context);
-        },
-        backgroundColor: context.appColors.secondaryAccent,
-        child: const Icon(Icons.add, size: 32),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     HomeAddEventDialog.show(context);
+      //   },
+      //   backgroundColor: context.appColors.secondaryAccent,
+      //   child: const Icon(Icons.add, size: 32),
+      // ),
     );
   }
 }

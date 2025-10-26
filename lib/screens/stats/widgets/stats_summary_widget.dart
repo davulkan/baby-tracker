@@ -1,3 +1,4 @@
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:flutter/material.dart';
 
 class StatsSummaryWidget extends StatelessWidget {
@@ -10,62 +11,70 @@ class StatsSummaryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 24,
-      runSpacing: 16,
+    final colors = context.appColors;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _buildStatItem(
+          context,
           Icons.bed,
           '${stats['sleepHours']} ч ${stats['sleepMinutes']} мин',
           '${stats['sleepCount']} раз',
-          const Color(0xFF6366F1),
+          colors.sleepColor,
         ),
         _buildStatItem(
+          context,
           Icons.child_care,
           '${stats['feedingHours']} ч ${stats['feedingMinutes']} мин',
           '${stats['feedingCount']} раз',
-          const Color(0xFF10B981),
+          colors.feedingColor,
         ),
         _buildStatItem(
+          context,
           Icons.auto_awesome,
           '',
           '${stats['diaperCount']} раз',
-          const Color(0xFFF59E0B),
+          colors.diaperColor,
         ),
         _buildStatItem(
+          context,
           Icons.local_drink,
           '', // Пока без объема
           '${stats['bottleCount']} раз',
-          const Color(0xFFEC4899),
+          colors.bottleColor,
         ),
       ],
     );
   }
 
-  Widget _buildStatItem(
-      IconData icon, String duration, String count, Color color) {
+  Widget _buildStatItem(BuildContext context, IconData icon, String duration,
+      String count, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, color: color, size: 20),
+        SizedBox(
+          height: 36, // Задаем фиксированную высоту для выравнивания
+          child: Icon(icon, color: color, size: 20),
+        ),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (duration.isNotEmpty)
               Text(
                 duration,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.appColors.textPrimaryColor,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             Text(
               count,
-              style: const TextStyle(
-                color: Colors.white60,
+              style: TextStyle(
+                color: context.appColors.textSecondaryColor,
                 fontSize: 12,
               ),
             ),

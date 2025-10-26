@@ -130,7 +130,7 @@ class PatternChartWidget extends StatelessWidget {
       width: displayWidth,
       height: trackHeight - 4, // Отступ между дорожками
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 2),
+        // margin: const EdgeInsets.symmetric(horizontal: 1),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(4),

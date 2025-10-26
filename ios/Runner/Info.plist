@@ -45,6 +45,10 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<key>NSCameraUsageDescription</key>
+		<string>This app needs camera access to take photos for your baby's profile.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>This app needs photo library access to select photos for your baby's profile.</string>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>

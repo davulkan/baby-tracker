@@ -101,12 +101,12 @@ class HomeTopBar extends StatelessWidget {
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       color: context.appColors.surfaceColor,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
@@ -119,8 +119,8 @@ class HomeTopBar extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 28,
-                          height: 28,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
@@ -141,12 +141,12 @@ class HomeTopBar extends StatelessWidget {
                           child: baby.photoUrl == null
                               ? Icon(
                                   Icons.child_care,
-                                  size: 14,
+                                  size: 20,
                                   color: context.appColors.primaryAccent,
                                 )
                               : null,
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -155,7 +155,7 @@ class HomeTopBar extends StatelessWidget {
                               baby.name,
                               style: TextStyle(
                                 color: context.appColors.textPrimaryColor,
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -163,7 +163,7 @@ class HomeTopBar extends StatelessWidget {
                               baby.ageText,
                               style: TextStyle(
                                 color: context.appColors.textSecondaryColor,
-                                fontSize: 9,
+                                fontSize: 10,
                               ),
                             ),
                           ],

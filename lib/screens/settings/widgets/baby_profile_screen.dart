@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/models/baby.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 
 class BabyProfileScreen extends StatefulWidget {
   final Baby? baby; // null = создание нового, иначе редактирование
@@ -58,14 +59,7 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
       lastDate: DateTime.now(),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF6366F1),
-              onPrimary: Colors.white,
-              surface: Color(0xFF1F1F1F),
-              onSurface: Colors.white,
-            ),
-          ),
+          data: Theme.of(context), // Use the app's current theme
           child: child!,
         );
       },
@@ -81,18 +75,21 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.baby != null;
+    final colors = context.appColors;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           isEditing ? 'Редактировать профиль' : 'Добавить ребенка',
-          style: const TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).appBarTheme.foregroundColor),
         ),
         centerTitle: true,
       ),
@@ -189,35 +186,39 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
       child: Stack(
         children: [
           CircleAvatar(
-            radius: 60,
-            backgroundColor: Theme.of(context).primaryColorLight,
-            backgroundImage: (baby?.photoUrl != null &&
-                   baby!.photoUrl!.isNotEmpty)
-                ? NetworkImage(baby.photoUrl!)
-                : null,
-            child: (baby?.photoUrl == null ||
-                    baby?.photoUrl?.isEmpty == true)
-                ? const Icon(Icons.child_care, size: 60, color: Colors.white)
+            radius: 80,
+            backgroundColor: context.appColors.surfaceVariantColor,
+            backgroundImage:
+                (baby?.photoUrl != null && baby!.photoUrl!.isNotEmpty)
+                    ? NetworkImage(baby.photoUrl!)
+                    : null,
+            child: (baby?.photoUrl == null || baby?.photoUrl?.isEmpty == true)
+                ? Icon(Icons.child_care,
+                    size: 60, color: context.appColors.textSecondaryColor)
                 : null,
           ),
           if (isUploading)
-            const Positioned.fill(
-              child: CircularProgressIndicator(),
+            Positioned.fill(
+              child: CircularProgressIndicator(
+                color: context.appColors.primaryAccent,
+              ),
             ),
           Positioned(
             right: 0,
             bottom: 0,
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF6366F1),
+                color: context.appColors.secondaryAccent,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.black, width: 3),
+                border: Border.all(
+                    color: Theme.of(context).scaffoldBackgroundColor, width: 3),
               ),
               child: IconButton(
                 icon:
                     const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                 onPressed: () {
-                  _showImageSourceActionSheet(context, babyProvider, currentUser!.uid);
+                  _showImageSourceActionSheet(
+                      context, babyProvider, currentUser!.uid);
                 },
               ),
             ),
@@ -226,9 +227,9 @@ class _BabyProfileScreenState extends State<BabyProfileScreen> {
       ),
     );
   }
-void _showImageSourceActionSheet(
-      BuildContext context, BabyProvider babyProvider, String userId) {
 
+  void _showImageSourceActionSheet(
+      BuildContext context, BabyProvider babyProvider, String userId) {
     showModalBottomSheet(
       context: context,
       // Делаем фон модального окна в стиле твоего приложения
@@ -258,7 +259,8 @@ void _showImageSourceActionSheet(
                         color: Theme.of(context).textTheme.bodyLarge?.color)),
                 onTap: () {
                   // Вызываем метод провайдера с ImageSource.camera
-                  babyProvider.pickAndUploadBabyImage(userId, ImageSource.camera);
+                  babyProvider.pickAndUploadBabyImage(
+                      userId, ImageSource.camera);
                   Navigator.of(context).pop();
                 },
               ),
@@ -268,6 +270,7 @@ void _showImageSourceActionSheet(
       },
     );
   }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -280,8 +283,8 @@ void _showImageSourceActionSheet(
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -289,12 +292,12 @@ void _showImageSourceActionSheet(
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: context.appColors.textPrimaryColor),
           validator: validator,
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: const Color(0xFF6366F1)),
+            prefixIcon: Icon(icon, color: context.appColors.secondaryAccent),
             filled: true,
-            fillColor: Colors.grey[900],
+            fillColor: context.appColors.surfaceColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -305,11 +308,13 @@ void _showImageSourceActionSheet(
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
+              borderSide: BorderSide(
+                  color: context.appColors.secondaryAccent, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 2),
+              borderSide:
+                  BorderSide(color: context.appColors.errorColor, width: 2),
             ),
           ),
         ),
@@ -321,10 +326,10 @@ void _showImageSourceActionSheet(
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Дата рождения',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
@@ -334,20 +339,20 @@ void _showImageSourceActionSheet(
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[900],
+              color: context.appColors.surfaceColor,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_today,
-                  color: Color(0xFF6366F1),
+                  color: context.appColors.secondaryAccent,
                 ),
                 const SizedBox(width: 16),
                 Text(
                   '${_birthDate.day}.${_birthDate.month}.${_birthDate.year}',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.appColors.textPrimaryColor,
                     fontSize: 16,
                   ),
                 ),
@@ -363,17 +368,17 @@ void _showImageSourceActionSheet(
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Пол',
           style: TextStyle(
-            color: Colors.white,
+            color: context.appColors.textPrimaryColor,
             fontSize: 16,
           ),
         ),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey[900],
+            color: context.appColors.surfaceColor,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -399,14 +404,18 @@ void _showImageSourceActionSheet(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6366F1) : Colors.transparent,
+          color: isSelected
+              ? context.appColors.secondaryAccent
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.white : Colors.white60,
+              color: isSelected
+                  ? Colors.white
+                  : context.appColors.textSecondaryColor,
               size: 32,
             ),
             const SizedBox(height: 8),
@@ -414,7 +423,9 @@ void _showImageSourceActionSheet(
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.white60,
+                color: isSelected
+                    ? Colors.white
+                    : context.appColors.textSecondaryColor,
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -457,9 +468,9 @@ void _showImageSourceActionSheet(
 
                     if (success && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Профиль обновлен'),
-                          backgroundColor: Color(0xFF10B981),
+                        SnackBar(
+                          content: const Text('Профиль обновлен'),
+                          backgroundColor: context.appColors.successColor,
                         ),
                       );
                       Navigator.pop(context);
@@ -478,9 +489,9 @@ void _showImageSourceActionSheet(
 
                     if (babyId != null && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Ребенок добавлен'),
-                          backgroundColor: Color(0xFF10B981),
+                        SnackBar(
+                          content: const Text('Ребенок добавлен'),
+                          backgroundColor: context.appColors.successColor,
                         ),
                       );
                       Navigator.pop(context);
@@ -491,13 +502,13 @@ void _showImageSourceActionSheet(
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(babyProvider.error!),
-                        backgroundColor: Colors.red,
+                        backgroundColor: context.appColors.errorColor,
                       ),
                     );
                   }
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6366F1),
+            backgroundColor: context.appColors.secondaryAccent,
             padding: const EdgeInsets.all(20),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
