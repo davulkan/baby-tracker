@@ -1,0 +1,12 @@
+# targets:
+#   $default:
+#     builders:
+#       # Отключаем realm:realm_generator, используем только realm_generator
+#       realm:realm_generator:
+#         enabled: false
+      
+#       realm_generator:realm:
+#         enabled: true
+#         generate_for:
+#           - lib/**
+#           # Исключаем test директорию, чтобы избежать конфликтаa
