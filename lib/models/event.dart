@@ -6,6 +6,7 @@ enum EventType {
   sleep,
   diaper,
   bottle,
+  medicine,
   health,
   milestone,
   other,
@@ -153,6 +154,8 @@ class Event {
         return EventType.diaper;
       case 'bottle':
         return EventType.bottle;
+      case 'medicine':
+        return EventType.medicine;
       case 'health':
         return EventType.health;
       case 'milestone':

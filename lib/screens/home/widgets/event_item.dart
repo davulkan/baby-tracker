@@ -7,6 +7,8 @@ import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/models/sleep_details.dart';
 import 'package:baby_tracker/models/diaper_details.dart';
+import 'package:baby_tracker/models/medicine.dart';
+import 'package:baby_tracker/models/medicine_details.dart';
 import 'package:baby_tracker/screens/home/widgets/live_timer_widget.dart';
 
 class EventItem extends StatelessWidget {
@@ -25,6 +27,8 @@ class EventItem extends StatelessWidget {
         return _buildDiaperEventItem(context);
       case EventType.bottle:
         return _buildBottleEventItem(context);
+      case EventType.medicine:
+        return _buildMedicineEventItem(context);
       default:
         return _buildGenericEventItem(context);
     }
@@ -245,6 +249,48 @@ class EventItem extends StatelessWidget {
       subtitle: _formatTime(event.startedAt),
       color: context.appColors.errorColor,
       additionalInfo: volumeInfo,
+    );
+  }
+
+  Widget _buildMedicineEventItem(BuildContext context) {
+    return Consumer<EventsProvider>(
+      builder: (context, eventsProvider, child) {
+        return FutureBuilder<MedicineDetails?>(
+          future: eventsProvider.getMedicineDetails(event.id),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || snapshot.data == null) {
+              return _buildEventItem(
+                context,
+                icon: Icons.medical_services,
+                title: 'Лекарство',
+                subtitle: _formatTime(event.startedAt),
+                color: context.appColors.warningColor,
+              );
+            }
+
+            final details = snapshot.data!;
+            return FutureBuilder<Medicine?>(
+              future: eventsProvider.getMedicine(details.medicineId),
+              builder: (context, medicineSnapshot) {
+                String? medicineName = 'Неизвестное лекарство';
+
+                if (medicineSnapshot.hasData && medicineSnapshot.data != null) {
+                  medicineName = medicineSnapshot.data!.name;
+                }
+
+                return _buildEventItem(
+                  context,
+                  icon: Icons.medical_services,
+                  title: 'Лекарство',
+                  subtitle: _formatTime(event.startedAt),
+                  color: context.appColors.warningColor,
+                  additionalInfo: medicineName,
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 

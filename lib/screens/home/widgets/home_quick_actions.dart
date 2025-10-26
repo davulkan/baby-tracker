@@ -8,6 +8,7 @@ import 'package:baby_tracker/screens/add_sleep_screen.dart';
 import 'package:baby_tracker/screens/add_feeding_screen.dart';
 import 'package:baby_tracker/screens/add_diaper_screen.dart';
 import 'package:baby_tracker/screens/add_bottle_screen.dart';
+import 'package:baby_tracker/screens/add_medicament_screen.dart';
 
 class HomeQuickActions extends StatelessWidget {
   const HomeQuickActions({super.key});
@@ -83,6 +84,20 @@ class HomeQuickActions extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const AddDiaperScreen()),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 12),
+                  _buildQuickActionButton(
+                    context,
+                    icon: Icons.medical_services,
+                    label: 'Лекарство',
+                    color: context.appColors.warningColor,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AddMedicamentScreen()),
                       );
                     },
                   ),

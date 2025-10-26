@@ -5,6 +5,8 @@ import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/models/feeding_details.dart';
 import 'package:baby_tracker/models/sleep_details.dart';
 import 'package:baby_tracker/models/diaper_details.dart';
+import 'package:baby_tracker/models/medicine.dart';
+import 'package:baby_tracker/models/medicine_details.dart';
 
 class EventsProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -305,6 +307,24 @@ class EventsProvider with ChangeNotifier {
     }
   }
 
+  // Обновление деталей лекарства
+  Future<bool> updateMedicineDetails(
+      String eventId, MedicineDetails details) async {
+    try {
+      await _firestore.collection('medicine_details').doc(eventId).set({
+        ...details.toFirestore(),
+        'last_modified_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'Ошибка обновления деталей лекарства';
+      debugPrint('Error updating medicine details: $e');
+      return false;
+    }
+  }
+
   // Удаление события
   Future<bool> deleteEvent(String eventId, EventType eventType) async {
     try {
@@ -321,6 +341,9 @@ class EventsProvider with ChangeNotifier {
           break;
         case EventType.diaper:
           await _firestore.collection('diaper_details').doc(eventId).delete();
+          break;
+        case EventType.medicine:
+          await _firestore.collection('medicine_details').doc(eventId).delete();
           break;
         default:
           break;
@@ -378,6 +401,22 @@ class EventsProvider with ChangeNotifier {
       return null;
     } catch (e) {
       debugPrint('Error getting diaper details: $e');
+      return null;
+    }
+  }
+
+  // Получение деталей лекарства
+  Future<MedicineDetails?> getMedicineDetails(String eventId) async {
+    try {
+      final doc =
+          await _firestore.collection('medicine_details').doc(eventId).get();
+
+      if (doc.exists) {
+        return MedicineDetails.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting medicine details: $e');
       return null;
     }
   }
@@ -471,6 +510,64 @@ class EventsProvider with ChangeNotifier {
       _error = 'Ошибка добавления события бутылки';
       debugPrint('Error adding bottle event: $e');
       notifyListeners();
+      return null;
+    }
+  }
+
+  // Добавление события лекарства
+  Future<String?> addMedicineEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime time,
+    required String medicineId,
+    required String createdBy,
+    required String createdByName,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Создаем основное событие
+      final event = Event(
+        id: '',
+        babyId: babyId,
+        familyId: familyId,
+        eventType: EventType.medicine,
+        startedAt: time,
+        notes: notes,
+        createdAt: DateTime.now(),
+        lastModifiedAt: DateTime.now(),
+        createdBy: createdBy,
+        createdByName: createdByName,
+        status: EventStatus.completed,
+      );
+
+      final eventDoc =
+          await _firestore.collection('events').add(event.toFirestore());
+
+      // Создаем детали лекарства
+      final medicineDetails = MedicineDetails(
+        id: '',
+        eventId: eventDoc.id,
+        medicineId: medicineId,
+        notes: notes,
+      );
+
+      await _firestore
+          .collection('medicine_details')
+          .doc(eventDoc.id)
+          .set(medicineDetails.toFirestore());
+
+      _isLoading = false;
+      notifyListeners();
+
+      return eventDoc.id;
+    } catch (e) {
+      _error = 'Ошибка добавления лекарства';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Error adding medicine event: $e');
       return null;
     }
   }
@@ -778,8 +875,56 @@ class EventsProvider with ChangeNotifier {
     }
   }
 
-  void clearError() {
-    _error = null;
-    notifyListeners();
+  // Получение списка лекарств для семьи
+  Stream<List<Medicine>> getMedicinesStream(String familyId) {
+    return _firestore
+        .collection('medicines')
+        .where('family_id', isEqualTo: familyId)
+        .orderBy('name')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Medicine.fromFirestore(doc)).toList();
+    }).handleError((error) {
+      debugPrint('Error in getMedicinesStream: $error');
+      return [];
+    });
+  }
+
+  // Получение лекарства по ID
+  Future<Medicine?> getMedicine(String medicineId) async {
+    try {
+      final doc = await _firestore.collection('medicines').doc(medicineId).get();
+
+      if (doc.exists) {
+        return Medicine.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting medicine: $e');
+      return null;
+    }
+  }
+
+  // Добавление нового лекарства
+  Future<String?> addMedicine({
+    required String familyId,
+    required String name,
+  }) async {
+    try {
+      final medicine = Medicine(
+        id: '',
+        familyId: familyId,
+        name: name,
+        createdAt: DateTime.now(),
+      );
+
+      final docRef = await _firestore.collection('medicines').add(medicine.toFirestore());
+      return docRef.id;
+    } catch (e) {
+      _error = 'Ошибка добавления лекарства';
+      debugPrint('Error adding medicine: $e');
+      notifyListeners();
+      return null;
+    }
   }
 }
