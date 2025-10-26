@@ -56,7 +56,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
                 // Заголовок
                 Text(
-                  'Baby Tracker',
+                  'BabySync',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),

@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
     <application
-        android:label="baby_tracker"
+        android:label="BabySync"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

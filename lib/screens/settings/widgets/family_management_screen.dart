@@ -134,7 +134,10 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                     .textTheme
                                     .bodySmall
                                     ?.copyWith(
-                                      color: Colors.grey[600],
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
                                     ),
                               ),
                             ],
@@ -167,9 +170,17 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.blue.shade900.withOpacity(0.3)
+                                      : Colors.blue.shade50,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.blue),
+                                  border: Border.all(
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.blue.shade300
+                                        : Colors.blue,
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisAlignment:
@@ -177,16 +188,24 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                   children: [
                                     Text(
                                       _familyInfo!['invite_code'] ?? '',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                         letterSpacing: 1,
-                                        color: Colors.black87,
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.blue.shade100
+                                            : Colors.black87,
                                       ),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.copy,
-                                          color: Colors.blue),
+                                      icon: Icon(
+                                        Icons.copy,
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.blue.shade300
+                                            : Colors.blue,
+                                      ),
                                       onPressed: () => _copyInviteCode(
                                         _familyInfo!['invite_code'] ?? '',
                                       ),
@@ -201,7 +220,10 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
                                     .textTheme
                                     .bodySmall
                                     ?.copyWith(
-                                      color: Colors.grey[600],
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
                                     ),
                               ),
                             ],
@@ -264,21 +286,31 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
   }
 
   Widget _buildMemberTile(Map<String, dynamic> member) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
           CircleAvatar(
+            backgroundColor:
+                isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
             backgroundImage: member['photo_url'] != null
                 ? NetworkImage(member['photo_url'])
                 : null,
-            child:
-                member['photo_url'] == null ? const Icon(Icons.person) : null,
+            child: member['photo_url'] == null
+                ? Icon(
+                    Icons.person,
+                    color: isDarkMode
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade600,
+                  )
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -287,16 +319,16 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
               children: [
                 Text(
                   member['name'] ?? 'Без имени',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+                    color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
                 Text(
                   member['email'] ?? '',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                   ),
                 ),
               ],
@@ -305,11 +337,13 @@ class _FamilyManagementScreenState extends State<FamilyManagementScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: member['role'] == 'parent1' ? Colors.blue : Colors.green,
+              color: member['role'] == 'parent1'
+                  ? (isDarkMode ? Colors.blue.shade700 : Colors.blue)
+                  : (isDarkMode ? Colors.green.shade700 : Colors.green),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              member['role'] == 'parent1' ? 'Создатель' : 'Участник',
+              member['role'] == 'parent1' ? 'Участник' : 'Участник',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 11,
