@@ -67,6 +67,10 @@ class AuthProvider with ChangeNotifier {
     try {
       _error = null;
       _isLoading = true;
+      await _googleSignIn.initialize(
+        serverClientId:
+            '152733126646-mdcbme9st55i6t5lv6mjqo9i5qk519eo.apps.googleusercontent.com', // Замените на ваш iOS Client ID
+      );
       notifyListeners();
 
       debugPrint('Начинаем процесс входа через Google...');

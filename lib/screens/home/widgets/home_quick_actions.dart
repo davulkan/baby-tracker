@@ -8,7 +8,7 @@ import 'package:baby_tracker/screens/add_sleep_screen.dart';
 import 'package:baby_tracker/screens/add_feeding_screen.dart';
 import 'package:baby_tracker/screens/add_diaper_screen.dart';
 import 'package:baby_tracker/screens/add_bottle_screen.dart';
-import 'package:baby_tracker/screens/add_medicament_screen.dart';
+import 'package:baby_tracker/screens/medicine/add_medicament_screen.dart';
 
 class HomeQuickActions extends StatelessWidget {
   const HomeQuickActions({super.key});

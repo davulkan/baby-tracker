@@ -34,10 +34,53 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
   Timer? _timer;
   String? _activeEventId;
 
+  // Для подписок на изменения
+  StreamSubscription<List<Event>>? _activeEventsSubscription;
+
   @override
   void initState() {
     super.initState();
+    _initializeSubscriptions();
     _initializeData();
+  }
+
+  void _initializeSubscriptions() {
+    final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+    final baby = babyProvider.currentBaby;
+    if (baby != null) {
+      _activeEventsSubscription =
+          Provider.of<EventsProvider>(context, listen: false)
+              .getActiveSleepEventsStream(baby.id)
+              .listen(_onActiveEventsChanged);
+    }
+  }
+
+  void _onActiveEventsChanged(List<Event> events) {
+    if (!mounted) return;
+
+    if (events.isNotEmpty && _activeEventId == null && widget.event == null) {
+      // Есть активное событие, переключиться на него
+      final event = events.first;
+      setState(() {
+        _activeEventId = event.id;
+        _startTime = event.startedAt;
+        _notesController.text = event.notes ?? '';
+        _isTimerRunning = true;
+        _isManualMode = false;
+      });
+      _startLocalTimer();
+    } else if (events.isEmpty &&
+        _activeEventId != null &&
+        widget.event == null) {
+      // Активное событие завершено другим пользователем
+      _timer?.cancel();
+      setState(() {
+        _isTimerRunning = false;
+        _endTime = DateTime.now();
+        _activeEventId = null;
+        _isManualMode = true;
+      });
+    }
   }
 
   bool _isDaySleep(DateTime time) {
@@ -80,11 +123,24 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
         _isDayMode = _isDaySleep(_startTime);
       }
     } else {
+      // Для нового события, проверить активные
+      final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+      final baby = babyProvider.currentBaby;
+      if (baby != null) {
+        final activeEvent =
+            await eventsProvider.getActiveEvent(baby.id, EventType.sleep);
+        if (activeEvent != null) {
+          _activeEventId = activeEvent.id;
+          _startTime = activeEvent.startedAt;
+          _notesController.text = activeEvent.notes ?? '';
+          _isTimerRunning = true;
+          _isManualMode = false;
+          _startLocalTimer();
+        }
+      }
       // Новое событие - определяем тип по текущему времени
       _isDayMode = _isDaySleep(DateTime.now());
     }
-    // Убираем логику автоматического переключения в активный таймер
-    // Пользователь должен иметь возможность создавать новые события независимо от активных
 
     if (mounted) {
       setState(() => _isLoading = false);
@@ -103,6 +159,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
   void dispose() {
     _notesController.dispose();
     _timer?.cancel();
+    _activeEventsSubscription?.cancel();
     super.dispose();
   }
 

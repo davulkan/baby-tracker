@@ -7,9 +7,9 @@ import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/event.dart';
-import 'package:baby_tracker/models/medicine.dart';
 import 'package:baby_tracker/models/medicine_details.dart';
 import 'package:baby_tracker/widgets/date_time_picker.dart';
+import 'package:baby_tracker/screens/medicine/widgets/medicine_selection_screen.dart';
 
 class AddMedicamentScreen extends StatefulWidget {
   final Event? event;
@@ -22,12 +22,11 @@ class AddMedicamentScreen extends StatefulWidget {
 
 class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
   DateTime _time = DateTime.now();
-  String? _selectedMedicineId;
+  Set<String> _selectedMedicineIds = {};
   final _notesController = TextEditingController();
   bool _isSaving = false;
   bool _isLoading = false;
   MedicineDetails? _existingDetails;
-  List<Medicine> _medicines = [];
 
   @override
   void initState() {
@@ -51,12 +50,29 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
       _existingDetails =
           await eventsProvider.getMedicineDetails(widget.event!.id);
       if (_existingDetails != null) {
-        _selectedMedicineId = _existingDetails!.medicineId;
+        _selectedMedicineIds = {_existingDetails!.medicineId};
       }
     }
 
     if (mounted) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _selectMedicines() async {
+    final result = await Navigator.push<Set<String>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MedicineSelectionScreen(
+          initialSelectedIds: _selectedMedicineIds,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedMedicineIds = result;
+      });
     }
   }
 
@@ -67,7 +83,7 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
   }
 
   Future<void> _saveToFirestore() async {
-    if (_isSaving || _selectedMedicineId == null) return;
+    if (_isSaving || _selectedMedicineIds.isEmpty) return;
 
     setState(() => _isSaving = true);
 
@@ -84,9 +100,10 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
         throw Exception('Ребенок или пользователь не найдены');
       }
 
-      bool success;
+      bool success = false;
       if (widget.event != null) {
-        // Обновляем существующее событие
+        // Обновляем существующее событие (только одно лекарство)
+        final selectedMedicineId = _selectedMedicineIds.first;
         final updatedEvent = widget.event!.copyWith(
           startedAt: _time,
           notes: _notesController.text.isEmpty ? null : _notesController.text,
@@ -100,24 +117,30 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
           final updatedDetails = MedicineDetails(
             id: '',
             eventId: widget.event!.id,
-            medicineId: _selectedMedicineId!,
+            medicineId: selectedMedicineId,
             notes: _notesController.text.isEmpty ? null : _notesController.text,
           );
           await eventsProvider.updateMedicineDetails(
               widget.event!.id, updatedDetails);
         }
       } else {
-        // Создаем новое событие лекарства
-        final eventId = await eventsProvider.addMedicineEvent(
-          babyId: baby.id,
-          familyId: baby.familyId,
-          time: _time,
-          medicineId: _selectedMedicineId!,
-          createdBy: user.uid,
-          createdByName: user.displayName ?? 'Родитель',
-          notes: _notesController.text.isEmpty ? null : _notesController.text,
-        );
-        success = eventId != null;
+        // Создаем события для всех выбранных лекарств
+        int successCount = 0;
+        for (String medicineId in _selectedMedicineIds) {
+          final eventId = await eventsProvider.addMedicineEvent(
+            babyId: baby.id,
+            familyId: baby.familyId,
+            time: _time,
+            medicineId: medicineId,
+            createdBy: user.uid,
+            createdByName: user.displayName ?? 'Родитель',
+            notes: _notesController.text.isEmpty ? null : _notesController.text,
+          );
+          if (eventId != null) {
+            successCount++;
+          }
+        }
+        success = successCount == _selectedMedicineIds.length;
       }
 
       if (success && mounted) {
@@ -125,7 +148,9 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
           SnackBar(
             content: Text(widget.event != null
                 ? 'Лекарство обновлено'
-                : 'Лекарство добавлено'),
+                : _selectedMedicineIds.length > 1
+                    ? 'Добавлено ${_selectedMedicineIds.length} лекарств'
+                    : 'Лекарство добавлено'),
             backgroundColor: context.appColors.successColor,
           ),
         );
@@ -160,52 +185,6 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
       setState(() {
         _time = selected;
       });
-    }
-  }
-
-  Future<void> _addNewMedicine() async {
-    final TextEditingController controller = TextEditingController();
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Добавить лекарство'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Название лекарства',
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Добавить'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null && result.isNotEmpty) {
-      final babyProvider = Provider.of<BabyProvider>(context, listen: false);
-      final eventsProvider =
-          Provider.of<EventsProvider>(context, listen: false);
-
-      final baby = babyProvider.currentBaby;
-      if (baby != null) {
-        final medicineId = await eventsProvider.addMedicine(
-          familyId: baby.familyId,
-          name: result,
-        );
-        if (medicineId != null) {
-          setState(() {
-            _selectedMedicineId = medicineId;
-          });
-        }
-      }
     }
   }
 
@@ -307,72 +286,16 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
 
             const SizedBox(height: 32),
 
-            // Выбор лекарства
+            // Выбор лекарств
             Text(
-              'Лекарство',
+              'Лекарства',
               style: TextStyle(
                 color: context.appColors.textPrimaryColor,
                 fontSize: 16,
               ),
             ),
             const SizedBox(height: 12),
-            Consumer<BabyProvider>(
-              builder: (context, babyProvider, child) {
-                final baby = babyProvider.currentBaby;
-                if (baby == null) return const SizedBox();
-
-                return StreamBuilder<List<Medicine>>(
-                  stream: Provider.of<EventsProvider>(context, listen: false)
-                      .getMedicinesStream(baby.familyId),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      _medicines = snapshot.data!;
-                    }
-
-                    return Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          value: _selectedMedicineId,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: context.appColors.surfaceColor,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            hintText: 'Выберите лекарство',
-                          ),
-                          items: _medicines.map((medicine) {
-                            return DropdownMenuItem<String>(
-                              value: medicine.id,
-                              child: Text(medicine.name),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedMedicineId = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          onPressed: _addNewMedicine,
-                          icon: const Icon(Icons.add),
-                          label: const Text('Добавить новое лекарство'),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                                color: context.appColors.primaryAccent),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
+            _buildMedicineSelectionButton(),
 
             const SizedBox(height: 32),
 
@@ -420,10 +343,65 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
     );
   }
 
+  Widget _buildMedicineSelectionButton() {
+    return GestureDetector(
+      onTap: widget.event != null && _selectedMedicineIds.length > 1
+          ? null
+          : _selectMedicines,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.appColors.surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _selectedMedicineIds.isEmpty
+                ? context.appColors.primaryAccent.withOpacity(0.3)
+                : context.appColors.primaryAccent,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              _selectedMedicineIds.isEmpty
+                  ? Icons.medical_services_outlined
+                  : Icons.medical_services,
+              color: _selectedMedicineIds.isEmpty
+                  ? context.appColors.textHintColor
+                  : context.appColors.primaryAccent,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _selectedMedicineIds.isEmpty
+                    ? 'Выберите лекарства'
+                    : widget.event != null
+                        ? 'Одно лекарство выбрано'
+                        : '${_selectedMedicineIds.length} лекарств выбрано',
+                style: TextStyle(
+                  color: _selectedMedicineIds.isEmpty
+                      ? context.appColors.textHintColor
+                      : context.appColors.textPrimaryColor,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            if (widget.event == null || _selectedMedicineIds.length == 1) ...[
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: context.appColors.textHintColor,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSaveButton() {
     return ElevatedButton(
       onPressed:
-          _selectedMedicineId == null || _isSaving ? null : _saveToFirestore,
+          _selectedMedicineIds.isEmpty || _isSaving ? null : _saveToFirestore,
       style: ElevatedButton.styleFrom(
         backgroundColor: context.appColors.primaryAccent,
         padding: const EdgeInsets.all(20),

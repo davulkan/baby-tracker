@@ -27,7 +27,6 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   DateTime _endTime = DateTime.now();
   final _notesController = TextEditingController();
   bool _isSaving = false;
-  FeedingDetails? _existingDetails;
 
   // Для таймера
   Timer? _timer;
@@ -41,9 +40,14 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   BreastSide? _firstBreast;
   BreastSide? _secondBreast;
 
+  // Для подписок на изменения
+  StreamSubscription<List<Event>>? _activeEventsSubscription;
+  StreamSubscription<FeedingDetails?>? _detailsSubscription;
+
   @override
   void initState() {
     super.initState();
+    _initializeSubscriptions();
     _initializeData();
   }
 
@@ -67,46 +71,33 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
           _notesController.text = widget.event!.notes!;
         }
 
-        // Загружаем детали кормления из Firestore
-        _existingDetails =
-            await eventsProvider.getFeedingDetails(widget.event!.id);
-        if (_existingDetails != null) {
-          _breastSide = _existingDetails!.breastSide ?? BreastSide.left;
-          _leftSeconds = _existingDetails!.leftDurationSeconds ?? 0;
-          _rightSeconds = _existingDetails!.rightDurationSeconds ?? 0;
-          _firstBreast = _existingDetails!.firstBreast;
-          _secondBreast = _existingDetails!.secondBreast;
-
-          // Определяем активное состояние из FeedingDetails
-          _isLeftActive =
-              _existingDetails!.activeState == FeedingActiveState.left;
-          _isRightActive =
-              _existingDetails!.activeState == FeedingActiveState.right;
-
-          // Если есть активность и lastActivityAt, добавляем прошедшее время
-          if ((_isLeftActive || _isRightActive) &&
-              _existingDetails!.lastActivityAt != null) {
-            final timeSinceLast = DateTime.now()
-                .difference(_existingDetails!.lastActivityAt!)
-                .inSeconds;
-            if (_isLeftActive) {
-              _leftSeconds += timeSinceLast;
-            } else if (_isRightActive) {
-              _rightSeconds += timeSinceLast;
-            }
-          }
-        }
-
-        // Запускаем таймер для обновления UI
+        _loadFeedingDetails(widget.event!.id);
         _startLocalTimer();
       }
       if (widget.event!.notes != null) {
         _notesController.text = widget.event!.notes!;
       }
+    } else {
+      // Для нового события, проверить активные
+      final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+      final baby = babyProvider.currentBaby;
+      if (baby != null) {
+        final activeEvent =
+            await eventsProvider.getActiveEvent(baby.id, EventType.feeding);
+        if (activeEvent != null) {
+          _activeEventId = activeEvent.id;
+          _startTime = activeEvent.startedAt;
+          _notesController.text = activeEvent.notes ?? '';
+          _isManualMode = false;
+          _loadFeedingDetails(activeEvent.id);
+          _startLocalTimer();
+        }
+      }
     }
-    // Убираем логику автоматического переключения в активный таймер
-    // Пользователь должен иметь возможность создавать новые события независимо от активных
-    setState(() {});
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _startLocalTimer() {
@@ -125,7 +116,78 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
   void dispose() {
     _notesController.dispose();
     _timer?.cancel();
+    _activeEventsSubscription?.cancel();
+    _detailsSubscription?.cancel();
     super.dispose();
+  }
+
+  void _initializeSubscriptions() {
+    final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+    final baby = babyProvider.currentBaby;
+    if (baby != null) {
+      _activeEventsSubscription =
+          Provider.of<EventsProvider>(context, listen: false)
+              .getActiveFeedingEventsStream(baby.id)
+              .listen(_onActiveEventsChanged);
+    }
+  }
+
+  void _onActiveEventsChanged(List<Event> events) {
+    if (!mounted) return;
+
+    if (events.isNotEmpty && _activeEventId == null && widget.event == null) {
+      // Есть активное событие, и мы не редактируем, переключиться на него
+      final event = events.first;
+      setState(() {
+        _activeEventId = event.id;
+        _startTime = event.startedAt;
+        _notesController.text = event.notes ?? '';
+        _isManualMode = false;
+      });
+      _loadFeedingDetails(event.id);
+      _startLocalTimer();
+    } else if (events.isEmpty &&
+        _activeEventId != null &&
+        widget.event == null) {
+      // Активное событие завершено другим пользователем
+      _timer?.cancel();
+      _detailsSubscription?.cancel();
+      setState(() {
+        _isLeftActive = false;
+        _isRightActive = false;
+        _activeEventId = null;
+        _isManualMode = true;
+      });
+    }
+  }
+
+  void _loadFeedingDetails(String eventId) {
+    _detailsSubscription?.cancel();
+    _detailsSubscription = Provider.of<EventsProvider>(context, listen: false)
+        .getFeedingDetailsStream(eventId)
+        .listen((details) {
+      if (details != null && mounted) {
+        setState(() {
+          _breastSide = details.breastSide ?? BreastSide.left;
+          _leftSeconds = details.leftDurationSeconds ?? 0;
+          _rightSeconds = details.rightDurationSeconds ?? 0;
+          _firstBreast = details.firstBreast;
+          _secondBreast = details.secondBreast;
+          _isLeftActive = details.activeState == FeedingActiveState.left;
+          _isRightActive = details.activeState == FeedingActiveState.right;
+          if ((_isLeftActive || _isRightActive) &&
+              details.lastActivityAt != null) {
+            final timeSinceLast =
+                DateTime.now().difference(details.lastActivityAt!).inSeconds;
+            if (_isLeftActive) {
+              _leftSeconds += timeSinceLast;
+            } else if (_isRightActive) {
+              _rightSeconds += timeSinceLast;
+            }
+          }
+        });
+      }
+    });
   }
 
   Future<void> _saveToFirestore() async {

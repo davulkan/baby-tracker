@@ -929,4 +929,53 @@ class EventsProvider with ChangeNotifier {
       return null;
     }
   }
+
+  // Stream активных событий кормления
+  Stream<List<Event>> getActiveFeedingEventsStream(String babyId) {
+    return _firestore
+        .collection('events')
+        .where('baby_id', isEqualTo: babyId)
+        .where('event_type', isEqualTo: 'feeding')
+        .where('ended_at', isNull: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    }).handleError((error) {
+      debugPrint('Error in getActiveFeedingEventsStream: $error');
+      return [];
+    });
+  }
+
+  // Stream активных событий сна
+  Stream<List<Event>> getActiveSleepEventsStream(String babyId) {
+    return _firestore
+        .collection('events')
+        .where('baby_id', isEqualTo: babyId)
+        .where('event_type', isEqualTo: 'sleep')
+        .where('ended_at', isNull: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    }).handleError((error) {
+      debugPrint('Error in getActiveSleepEventsStream: $error');
+      return [];
+    });
+  }
+
+  // Stream деталей кормления
+  Stream<FeedingDetails?> getFeedingDetailsStream(String eventId) {
+    return _firestore
+        .collection('feeding_details')
+        .doc(eventId)
+        .snapshots()
+        .map((doc) {
+      if (doc.exists) {
+        return FeedingDetails.fromFirestore(doc);
+      }
+      return null;
+    }).handleError((error) {
+      debugPrint('Error in getFeedingDetailsStream: $error');
+      return null;
+    });
+  }
 }
