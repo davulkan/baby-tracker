@@ -66,27 +66,42 @@ class HomeTopBar extends StatelessWidget {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Чип с весом
+                // Чип с весом - теперь без фона и границы
                 if (baby.weightAtBirthKg != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    margin: const EdgeInsets.only(right: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.monitor_weight_outlined,
+                          size: 14,
+                          color: context.appColors.textSecondaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${baby.weightAtBirthKg!.toStringAsFixed(1)} кг',
+                          style: TextStyle(
+                            color: context.appColors.textSecondaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Разделитель
+                if (baby.weightAtBirthKg != null)
+                  Container(
+                    width: 4,
+                    height: 4,
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
-                      color: context.appColors.primaryAccent.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: context.appColors.primaryAccent.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      '${baby.weightAtBirthKg!.toStringAsFixed(1)} кг',
-                      style: TextStyle(
-                        color: context.appColors.primaryAccent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      color: context.appColors.textHintColor,
+                      shape: BoxShape.circle,
                     ),
                   ),
 
@@ -116,8 +131,7 @@ class HomeTopBar extends StatelessWidget {
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
                             colors: [
-                              context.appColors.primaryAccent
-                                  .withOpacity(0.2),
+                              context.appColors.primaryAccent.withOpacity(0.2),
                               context.appColors.secondaryAccent
                                   .withOpacity(0.2),
                             ],
@@ -163,26 +177,41 @@ class HomeTopBar extends StatelessWidget {
                   ),
                 ),
 
-                // Чип с ростом
+                // Разделитель
                 if (baby.heightAtBirthCm != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
+                    width: 4,
+                    height: 4,
+                    margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
-                      color: context.appColors.successColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: context.appColors.successColor.withOpacity(0.3),
-                        width: 1,
-                      ),
+                      color: context.appColors.textHintColor,
+                      shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      '${baby.heightAtBirthCm!.toStringAsFixed(0)} см',
-                      style: TextStyle(
-                        color: context.appColors.successColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+
+                // Чип с ростом - теперь без фона и границы
+                if (baby.heightAtBirthCm != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.straighten,
+                          size: 14,
+                          color: context.appColors.textSecondaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${baby.heightAtBirthCm!.toStringAsFixed(0)} см',
+                          style: TextStyle(
+                            color: context.appColors.textSecondaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],

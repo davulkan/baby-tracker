@@ -211,9 +211,9 @@ class HomeEventsSliverList extends StatelessWidget {
           color: context.appColors.errorColor,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: Icon(
+        child: const Icon(
           Icons.delete,
-          color: context.appColors.textPrimaryColor,
+          color: Colors.white,
           size: 32,
         ),
       ),

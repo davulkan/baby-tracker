@@ -730,14 +730,18 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
                 children: [
                   Icon(
                     _isLeftActive ? Icons.pause : Icons.timer,
-                    color: context.appColors.textPrimaryColor,
+                    color: _isLeftActive
+                        ? Colors.white
+                        : context.appColors.textPrimaryColor,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     _isLeftActive ? 'Пауза' : 'Левая',
                     style: TextStyle(
-                      color: context.appColors.textPrimaryColor,
+                      color: _isLeftActive
+                          ? Colors.white
+                          : context.appColors.textPrimaryColor,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -764,14 +768,18 @@ class _AddFeedingScreenState extends State<AddFeedingScreen> {
                 children: [
                   Icon(
                     _isRightActive ? Icons.pause : Icons.timer,
-                    color: context.appColors.textPrimaryColor,
+                    color: _isRightActive
+                        ? Colors.white
+                        : context.appColors.textPrimaryColor,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     _isRightActive ? 'Пауза' : 'Правая',
                     style: TextStyle(
-                      color: context.appColors.textPrimaryColor,
+                      color: _isRightActive
+                          ? Colors.white
+                          : context.appColors.textPrimaryColor,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),

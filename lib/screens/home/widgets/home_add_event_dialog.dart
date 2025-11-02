@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/screens/add_sleep_screen.dart';
 import 'package:baby_tracker/screens/add_feeding_screen.dart';
 import 'package:baby_tracker/screens/add_diaper_screen.dart';
 import 'package:baby_tracker/screens/add_bottle_screen.dart';
 import 'package:baby_tracker/screens/add_weight_screen.dart';
 import 'package:baby_tracker/screens/add_height_screen.dart';
-import 'package:baby_tracker/screens/add_head_circumference_screen.dart';
 import 'package:baby_tracker/screens/add_walk_screen.dart';
 import 'package:baby_tracker/screens/add_bath_screen.dart';
 import 'package:baby_tracker/screens/medicine/add_medicament_screen.dart';
 
 class HomeAddEventDialog {
   static void show(BuildContext context) {
+    final appColors = context.appColors;
+    final theme = Theme.of(context);
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey[900],
+      backgroundColor: theme.dialogBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -23,10 +26,10 @@ class HomeAddEventDialog {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Добавить событие',
               style: TextStyle(
-                color: Colors.white,
+                color: appColors.textPrimaryColor,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -41,7 +44,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.bed,
                       label: 'Сон',
-                      color: const Color(0xFF6366F1),
+                      color: appColors.sleepColor,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -56,7 +59,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.child_care,
                       label: 'Кормление',
-                      color: const Color(0xFF10B981),
+                      color: appColors.feedingColor,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -71,7 +74,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.local_drink,
                       label: 'Бутылка',
-                      color: const Color(0xFFEC4899),
+                      color: appColors.bottleColor,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -86,7 +89,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.auto_awesome,
                       label: 'Подгузник',
-                      color: const Color(0xFFF59E0B),
+                      color: appColors.diaperColor,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -101,7 +104,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.monitor_weight,
                       label: 'Вес',
-                      color: const Color(0xFF8B5CF6),
+                      color: appColors.primaryAccent,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -116,7 +119,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.height,
                       label: 'Рост',
-                      color: const Color(0xFF06B6D4),
+                      color: appColors.secondaryAccent,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -131,7 +134,7 @@ class HomeAddEventDialog {
                     //   context,
                     //   icon: Icons.child_care,
                     //   label: 'Окружность головы',
-                    //   color: const Color(0xFFF97316),
+                    //   color: appColors.warningColor,
                     //   onTap: () {
                     //     Navigator.pop(context);
                     //     Navigator.push(
@@ -147,7 +150,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.directions_walk,
                       label: 'Прогулка',
-                      color: const Color(0xFF22C55E),
+                      color: appColors.successColor,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -162,7 +165,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.bathtub,
                       label: 'Купание',
-                      color: const Color(0xFF3B82F6),
+                      color: appColors.secondaryAccent,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -177,7 +180,7 @@ class HomeAddEventDialog {
                       context,
                       icon: Icons.medical_services,
                       label: 'Лекарства',
-                      color: const Color(0xFFDC2626),
+                      color: appColors.errorColor,
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.push(
@@ -204,20 +207,26 @@ class HomeAddEventDialog {
     required Color color,
     required VoidCallback onTap,
   }) {
+    final appColors = context.appColors;
+
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.grey[850],
+          color: appColors.surfaceVariantColor,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.2),
+            width: 1,
+          ),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+                color: color.withOpacity(0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -229,8 +238,8 @@ class HomeAddEventDialog {
             const SizedBox(width: 16),
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: appColors.textPrimaryColor,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),

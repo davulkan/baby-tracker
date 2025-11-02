@@ -43,7 +43,7 @@ class SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'BabySync',
+              'ZenBaby',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,

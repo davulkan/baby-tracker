@@ -7,7 +7,9 @@ import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/auth_provider.dart';
 import 'package:baby_tracker/providers/theme_provider.dart';
 import 'package:baby_tracker/models/event.dart';
+import 'package:baby_tracker/models/medicine.dart';
 import 'package:baby_tracker/models/medicine_details.dart';
+import 'package:baby_tracker/services/medicine_service.dart';
 import 'package:baby_tracker/widgets/date_time_picker.dart';
 import 'package:baby_tracker/screens/medicine/widgets/medicine_selection_screen.dart';
 
@@ -27,6 +29,8 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
   bool _isSaving = false;
   bool _isLoading = false;
   MedicineDetails? _existingDetails;
+  List<Medicine> _popularMedicines = [];
+  final MedicineService _medicineService = MedicineService();
 
   @override
   void initState() {
@@ -54,8 +58,34 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
       }
     }
 
+    // Загружаем популярные лекарства
+    await _loadPopularMedicines();
+
     if (mounted) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadPopularMedicines() async {
+    try {
+      final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+      final baby = babyProvider.currentBaby;
+
+      if (baby != null) {
+        final popularMedicines = await _medicineService.getPopularMedicines(
+          familyId: baby.familyId,
+          babyId: baby.id,
+          limit: 4,
+        );
+
+        if (mounted) {
+          setState(() {
+            _popularMedicines = popularMedicines;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading popular medicines: $e');
     }
   }
 
@@ -292,10 +322,26 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
               style: TextStyle(
                 color: context.appColors.textPrimaryColor,
                 fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 12),
             _buildMedicineSelectionButton(),
+
+            // Быстрый выбор популярных лекарств
+            if (_popularMedicines.isNotEmpty && widget.event == null) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Часто используемые',
+                style: TextStyle(
+                  color: context.appColors.textSecondaryColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildPopularMedicinesGrid(),
+            ],
 
             const SizedBox(height: 32),
 
@@ -427,6 +473,65 @@ class _AddMedicamentScreenState extends State<AddMedicamentScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+    );
+  }
+
+  Widget _buildPopularMedicinesGrid() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _popularMedicines.map((medicine) {
+        final isSelected = _selectedMedicineIds.contains(medicine.id);
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              if (isSelected) {
+                _selectedMedicineIds.remove(medicine.id);
+              } else {
+                _selectedMedicineIds.add(medicine.id);
+              }
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? context.appColors.primaryAccent.withOpacity(0.15)
+                  : context.appColors.surfaceColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected
+                    ? context.appColors.primaryAccent
+                    : context.appColors.textHintColor.withOpacity(0.3),
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isSelected ? Icons.check_circle : Icons.medication_outlined,
+                  size: 18,
+                  color: isSelected
+                      ? context.appColors.primaryAccent
+                      : context.appColors.textSecondaryColor,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  medicine.name,
+                  style: TextStyle(
+                    color: isSelected
+                        ? context.appColors.primaryAccent
+                        : context.appColors.textPrimaryColor,
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

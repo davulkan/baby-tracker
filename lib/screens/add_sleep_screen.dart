@@ -597,7 +597,7 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: isSelected
-                ? context.appColors.textPrimaryColor
+                ? Colors.white
                 : context.appColors.textSecondaryColor,
             fontSize: 16,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -747,24 +747,24 @@ class _AddSleepScreenState extends State<AddSleepScreen> {
                 },
           style: ElevatedButton.styleFrom(
             backgroundColor: context.appColors.secondaryAccent,
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.all(20),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
           child: eventsProvider.isLoading
-              ? SizedBox(
+              ? const SizedBox(
                   height: 20,
                   width: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: context.appColors.textPrimaryColor,
+                    color: Colors.white,
                   ),
                 )
               : Text(
                   widget.event != null ? 'Обновить' : 'Сохранить',
-                  style: TextStyle(
-                    color: context.appColors.textPrimaryColor,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),

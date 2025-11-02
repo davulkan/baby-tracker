@@ -86,6 +86,52 @@ class MedicineService {
     });
   }
 
+  /// Получение популярных лекарств (часто используемых)
+  Future<List<Medicine>> getPopularMedicines({
+    required String familyId,
+    required String babyId,
+    int limit = 5,
+  }) async {
+    try {
+      // Получаем последние события
+      final allEvents = await _eventsRepo.getEventsStream(babyId).first;
+
+      // Фильтруем только события с лекарствами
+      final medicineEvents = allEvents
+          .where((event) => event.eventType == EventType.medicine)
+          .take(50)
+          .toList();
+
+      // Считаем частоту использования каждого лекарства
+      final Map<String, int> medicineFrequency = {};
+      for (final event in medicineEvents) {
+        final details = await _detailsService.getMedicineDetails(event.id);
+        if (details != null) {
+          medicineFrequency[details.medicineId] =
+              (medicineFrequency[details.medicineId] ?? 0) + 1;
+        }
+      }
+
+      // Сортируем по частоте использования
+      final sortedMedicineIds = medicineFrequency.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      // Получаем объекты Medicine для популярных ID
+      final List<Medicine> popularMedicines = [];
+      for (final entry in sortedMedicineIds.take(limit)) {
+        final medicine = await getMedicine(entry.key);
+        if (medicine != null) {
+          popularMedicines.add(medicine);
+        }
+      }
+
+      return popularMedicines;
+    } catch (e) {
+      debugPrint('Error getting popular medicines: $e');
+      return [];
+    }
+  }
+
   /// Получение лекарства по ID
   Future<Medicine?> getMedicine(String medicineId) async {
     try {

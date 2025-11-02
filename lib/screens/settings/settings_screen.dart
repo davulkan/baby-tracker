@@ -544,7 +544,7 @@ class SettingsScreen extends StatelessWidget {
         ),
         content: SingleChildScrollView(
           child: Text(
-            'BabySync уважает вашу конфиденциальность.\n\n'
+            'ZenBaby уважает вашу конфиденциальность.\n\n'
             'Мы собираем только необходимую информацию для работы приложения:\n'
             '• Данные профиля Google для авторизации\n'
             '• Информацию о детях для отслеживания\n'
@@ -577,7 +577,7 @@ class SettingsScreen extends StatelessWidget {
         ),
         content: SingleChildScrollView(
           child: Text(
-            'Условия использования BabySync:\n\n'
+            'Условия использования ZenBaby:\n\n'
             '1. Приложение предназначено для личного использования\n'
             '2. Вы несете ответственность за достоверность данных\n'
             '3. Запрещается использовать приложение в коммерческих целях\n'

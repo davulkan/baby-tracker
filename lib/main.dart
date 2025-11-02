@@ -71,7 +71,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<theme.ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
-            title: 'BabySync',
+            title: 'ZenBaby',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,

@@ -72,8 +72,8 @@ class _StatsScreenState extends State<StatsScreen>
           labelColor: context.appColors.primaryAccent,
           unselectedLabelColor: context.appColors.textSecondaryColor,
           tabs: const [
-            Tab(text: 'Паттерны'),
-            Tab(text: 'Вес, рост'),
+            Tab(text: 'Ежедневные события'),
+            Tab(text: 'Вес и рост'),
           ],
         ),
       ),
