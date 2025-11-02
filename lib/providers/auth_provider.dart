@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:baby_tracker/services/family_data_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  final FamilyDataService _familyDataService = FamilyDataService();
 
   User? _user;
   String? _familyId;
@@ -76,9 +78,8 @@ class AuthProvider with ChangeNotifier {
       debugPrint('Начинаем процесс входа через Google...');
 
       // Инициируем процесс входа через Google
-      debugPrint('Вызываем _googleSignIn.authenticate()...');
-      final GoogleSignInAccount? googleUser =
-          await _googleSignIn.authenticate();
+      debugPrint('Вызываем _googleSignIn.signIn()...');
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
         // Пользователь отменил вход
@@ -91,22 +92,17 @@ class AuthProvider with ChangeNotifier {
       debugPrint(
           'Google Sign-In успешен, получен аккаунт: ${googleUser.email}');
 
-      debugPrint('Авторизуемся в Firebase через Google Sign-In...');
-      // В новой версии GoogleSignIn мы можем напрямую получать учетные данные для Firebase
-      // Используем стандартные scope-ы для Firebase
-      final authorization = await googleUser.authorizationClient
-          .authorizationForScopes(['email', 'profile', 'openid']);
-
-      if (authorization == null) {
-        throw Exception('Не удалось получить авторизацию от Google');
-      }
+      debugPrint('Получаем токены аутентификации...');
+      // Получаем токены аутентификации
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       debugPrint('Токены получены успешно');
 
-      // Создаём учетные данные для Firebase с доступным токеном
+      // Создаём учетные данные для Firebase
       final credential = GoogleAuthProvider.credential(
-        accessToken: authorization.accessToken,
-        idToken: null, // В новой версии idToken может быть недоступен
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
       // Входим в Firebase с учетными данными Google
@@ -349,5 +345,52 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Удаление всех данных семьи
+  Future<bool> deleteAllFamilyData() async {
+    if (_familyId == null) {
+      _error = 'Нет активной семьи для удаления данных';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Используем сервис для удаления всех данных семьи
+      final success = await _familyDataService.deleteAllFamilyData(_familyId!);
+      
+      _isLoading = false;
+      
+      if (success) {
+        debugPrint('Все данные семьи успешно удалены');
+      } else {
+        _error = 'Ошибка при удалении данных семьи';
+      }
+      
+      notifyListeners();
+      return success;
+      
+    } catch (e) {
+      _error = 'Ошибка при удалении данных семьи: $e';
+      _isLoading = false;
+      debugPrint('Error deleting family data: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Получение количества данных семьи
+  Future<Map<String, int>?> getFamilyDataCount() async {
+    if (_familyId == null) return null;
+
+    try {
+      return await _familyDataService.getFamilyDataCount(_familyId!);
+    } catch (e) {
+      debugPrint('Error getting family data count: $e');
+      return null;
+    }
   }
 }

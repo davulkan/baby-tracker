@@ -159,8 +159,8 @@ class SettingsScreen extends StatelessWidget {
           ),
           SettingItemWidget(
             icon: Icons.delete_forever,
-            title: 'Удалить все данные',
-            subtitle: 'Безвозвратное удаление',
+            title: 'Удалить все данные семьи',
+            subtitle: 'События, записи, профили детей',
             textColor: context.appColors.errorColor,
             onTap: () {
               _showDeleteDataDialog(context, authProvider);
@@ -248,12 +248,12 @@ class SettingsScreen extends StatelessWidget {
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).dialogBackgroundColor,
         title: Text(
-          'Удалить все данные?',
+          'Удалить все данные семьи?',
           style:
               TextStyle(color: Theme.of(context).textTheme.titleLarge?.color),
         ),
         content: Text(
-          'Это действие невозможно отменить. Все данные о ребенке будут удалены навсегда.',
+          'Это действие невозможно отменить. Все события, записи и данные детей будут удалены навсегда.',
           style:
               TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
         ),
@@ -268,7 +268,7 @@ class SettingsScreen extends StatelessWidget {
               await _deleteAllData(context, authProvider);
             },
             child: Text(
-              'Удалить',
+              'Удалить все',
               style: TextStyle(color: context.appColors.errorColor),
             ),
           ),
@@ -493,42 +493,156 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _deleteAllData(
       BuildContext context, AuthProvider authProvider) async {
+    // Сначала получаем количество данных для информации
+    final dataCount = await authProvider.getFamilyDataCount();
+    
+    if (!context.mounted) return;
+
+    // Показываем дополнительное подтверждение с информацией о данных
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        title: Text(
+          'Последнее предупреждение!',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.titleLarge?.color,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Будет удалено:',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (dataCount != null) ...[
+              Text(
+                '• События: ${dataCount['events']} шт.',
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+              ),
+              Text(
+                '• Профили детей: ${dataCount['babies']} шт.',
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+              ),
+              Text(
+                '• Лекарства: ${dataCount['medicines']} шт.',
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+              ),
+            ] else
+              Text(
+                '• Все данные семьи',
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text(
+              'Это действие нельзя отменить!',
+              style: TextStyle(
+                color: context.appColors.errorColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: context.appColors.errorColor,
+            ),
+            child: const Text(
+              'Да, удалить всё',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
     // Показываем индикатор загрузки
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        backgroundColor: Colors.transparent,
-        content: Center(
-          child: CircularProgressIndicator(),
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Удаление данных...\nЭто может занять некоторое время',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+          ],
         ),
       ),
     );
 
     try {
-      // Здесь можно добавить логику удаления всех данных
-      await Future.delayed(const Duration(seconds: 2)); // Имитация загрузки
+      // Удаляем все данные семьи
+      final success = await authProvider.deleteAllFamilyData();
 
       if (context.mounted) {
         Navigator.pop(context); // Закрываем индикатор
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                const Text('Функция будет доступна в следующем обновлении'),
-            backgroundColor: context.appColors.warningColor,
-          ),
-        );
+
+        if (success) {
+          // Очищаем данные в провайдерах
+          final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+          babyProvider.clearData();
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Все данные семьи успешно удалены'),
+              backgroundColor: context.appColors.successColor,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                authProvider.error ?? 'Ошибка при удалении данных',
+              ),
+              backgroundColor: context.appColors.errorColor,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Ошибка при удалении данных'),
+            content: const Text('Критическая ошибка при удалении данных'),
             backgroundColor: context.appColors.errorColor,
           ),
         );
       }
+      debugPrint('Critical error deleting family data: $e');
     }
   }
 
