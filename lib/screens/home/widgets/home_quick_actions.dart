@@ -13,6 +13,8 @@ import 'package:baby_tracker/screens/medicine/add_medicament_screen.dart';
 import 'package:baby_tracker/screens/add_weight_screen.dart';
 import 'package:baby_tracker/screens/add_height_screen.dart';
 import 'package:baby_tracker/screens/add_head_circumference_screen.dart';
+import 'package:baby_tracker/screens/add_walk_screen.dart';
+import 'package:baby_tracker/screens/add_bath_screen.dart';
 
 class HomeQuickActions extends StatelessWidget {
   const HomeQuickActions({super.key});
@@ -234,6 +236,28 @@ class HomeQuickActions extends StatelessWidget {
             context,
             MaterialPageRoute(
                 builder: (_) => const AddHeadCircumferenceScreen()),
+          );
+        },
+      },
+      EventType.walk: {
+        'icon': Icons.directions_walk,
+        'label': 'Прогулка',
+        'color': context.appColors.secondaryAccent,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddWalkScreen()),
+          );
+        },
+      },
+      EventType.bath: {
+        'icon': Icons.bathtub,
+        'label': 'Купание',
+        'color': context.appColors.primaryAccent,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddBathScreen()),
           );
         },
       },

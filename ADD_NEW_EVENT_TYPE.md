@@ -31,6 +31,37 @@ enum EventType {
 }
 ```
 
+### 1.1.1 Обновление функции парсинга типов событий
+После добавления нового типа в enum, необходимо обновить функцию `_parseEventType` в том же файле, чтобы она могла правильно распознавать новый тип при чтении из Firestore:
+
+```dart
+static EventType _parseEventType(String? type) {
+  switch (type) {
+    case 'feeding':
+      return EventType.feeding;
+    case 'sleep':
+      return EventType.sleep;
+    case 'diaper':
+      return EventType.diaper;
+    case 'bottle':
+      return EventType.bottle;
+    case 'medicine':
+      return EventType.medicine;
+    case 'weight':
+      return EventType.weight;
+    case 'height':
+      return EventType.height;
+    case 'headCircumference':
+      return EventType.headCircumference;
+    // ДОБАВИТЬ CASE ДЛЯ НОВОГО ТИПА ЗДЕСЬ
+    case 'newEventType':
+      return EventType.newEventType;
+    default:
+      return EventType.other;
+  }
+}
+```
+
 ### 1.2 Добавление полей в класс Event (если нужны)
 Если новый тип требует хранения дополнительных данных в основной коллекции events:
 
@@ -61,6 +92,7 @@ class Event {
   Map<String, dynamic> toFirestore() {
     return {
       // Существующие поля...
+      'status': status.name,  // Убедитесь, что статус сохраняется
       if (newField != null) 'new_field': newField,
     };
   }
@@ -399,6 +431,7 @@ case EventType.newEventType:
 ## Чек-лист перед коммитом
 
 - [ ] Тип добавлен в EventType enum
+- [ ] Функция _parseEventType обновлена для нового типа
 - [ ] Модель Event обновлена (если нужны поля)
 - [ ] Детальная модель создана (если нужна)
 - [ ] EventsProvider обновлен

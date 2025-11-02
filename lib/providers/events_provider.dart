@@ -715,6 +715,96 @@ class EventsProvider with ChangeNotifier {
     }
   }
 
+  // Добавление события прогулки
+  Future<String?> addWalkEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime startedAt,
+    required DateTime endedAt,
+    required String createdBy,
+    required String createdByName,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Создаем основное событие
+      final event = Event(
+        id: '',
+        babyId: babyId,
+        familyId: familyId,
+        eventType: EventType.walk,
+        startedAt: startedAt,
+        endedAt: endedAt,
+        notes: notes,
+        createdAt: DateTime.now(),
+        lastModifiedAt: DateTime.now(),
+        createdBy: createdBy,
+        createdByName: createdByName,
+        status: EventStatus.completed,
+      );
+
+      final eventDoc =
+          await _firestore.collection('events').add(event.toFirestore());
+
+      _isLoading = false;
+      notifyListeners();
+
+      return eventDoc.id;
+    } catch (e) {
+      _error = 'Ошибка добавления прогулки';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Error adding walk event: $e');
+      return null;
+    }
+  }
+
+  // Добавление события купания
+  Future<String?> addBathEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime time,
+    required String createdBy,
+    required String createdByName,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Создаем основное событие
+      final event = Event(
+        id: '',
+        babyId: babyId,
+        familyId: familyId,
+        eventType: EventType.bath,
+        startedAt: time,
+        notes: notes,
+        createdAt: DateTime.now(),
+        lastModifiedAt: DateTime.now(),
+        createdBy: createdBy,
+        createdByName: createdByName,
+        status: EventStatus.completed,
+      );
+
+      final eventDoc =
+          await _firestore.collection('events').add(event.toFirestore());
+
+      _isLoading = false;
+      notifyListeners();
+
+      return eventDoc.id;
+    } catch (e) {
+      _error = 'Ошибка добавления купания';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Error adding bath event: $e');
+      return null;
+    }
+  }
+
   // Обновление события бутылки
   Future<bool> updateBottleEvent({
     required String eventId,
@@ -950,6 +1040,77 @@ class EventsProvider with ChangeNotifier {
     }
   }
 
+  // Запуск события прогулки
+  Future<String?> startWalkEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime startedAt,
+    required String createdBy,
+    required String createdByName,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final eventData = {
+        'baby_id': babyId,
+        'family_id': familyId,
+        'event_type': 'walk',
+        'started_at': Timestamp.fromDate(startedAt),
+        'ended_at': null, // null означает активное событие
+        'notes': notes,
+        'created_at': FieldValue.serverTimestamp(),
+        'last_modified_at': FieldValue.serverTimestamp(),
+        'created_by': createdBy,
+        'created_by_name': createdByName,
+        'version': 1,
+      };
+
+      final docRef = await _firestore.collection('events').add(eventData);
+
+      _isLoading = false;
+      notifyListeners();
+      return docRef.id;
+    } catch (e) {
+      _error = 'Ошибка запуска таймера прогулки';
+      debugPrint('Error starting walk event: $e');
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Завершение события прогулки
+  Future<bool> stopWalkEvent({
+    required String eventId,
+    required DateTime endedAt,
+    String? lastModifiedBy,
+    String? notes,
+  }) async {
+    try {
+      final updates = <String, dynamic>{
+        'ended_at': Timestamp.fromDate(endedAt),
+        'last_modified_at': FieldValue.serverTimestamp(),
+      };
+
+      if (lastModifiedBy != null) {
+        updates['last_modified_by'] = lastModifiedBy;
+      }
+      if (notes != null) {
+        updates['notes'] = notes;
+      }
+
+      await _firestore.collection('events').doc(eventId).update(updates);
+      return true;
+    } catch (e) {
+      _error = 'Ошибка завершения таймера прогулки';
+      debugPrint('Error stopping walk event: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Получение активных событий (с null endedAt)
   Stream<List<Event>> getActiveEventsStream(String babyId) {
     return _firestore
@@ -1101,6 +1262,22 @@ class EventsProvider with ChangeNotifier {
       return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
     }).handleError((error) {
       debugPrint('Error in getActiveSleepEventsStream: $error');
+      return [];
+    });
+  }
+
+  // Stream активных событий прогулки
+  Stream<List<Event>> getActiveWalkEventsStream(String babyId) {
+    return _firestore
+        .collection('events')
+        .where('baby_id', isEqualTo: babyId)
+        .where('event_type', isEqualTo: 'walk')
+        .where('ended_at', isNull: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    }).handleError((error) {
+      debugPrint('Error in getActiveWalkEventsStream: $error');
       return [];
     });
   }

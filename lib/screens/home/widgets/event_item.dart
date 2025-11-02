@@ -28,6 +28,18 @@ class EventTypeConfig {
 }
 
 final Map<EventType, EventTypeConfig> _eventTypeConfigs = {
+  EventType.walk: EventTypeConfig(
+      icon: Icons.directions_walk,
+      title: 'Прогулка',
+      colorGetter: (context) => context.appColors.secondaryAccent,
+      additionalInfoGetter: (event) => null,
+      showLiveTimer: true),
+  EventType.bath: EventTypeConfig(
+    icon: Icons.bathtub,
+    title: 'Купание',
+    colorGetter: (context) => context.appColors.primaryAccent,
+    additionalInfoGetter: (event) => null,
+  ),
   EventType.other: EventTypeConfig(
     icon: Icons.event,
     title: 'Событие',
@@ -70,11 +82,19 @@ class EventItem extends StatelessWidget {
         _eventTypeConfigs[EventType.other]!;
     final additionalInfo = config.additionalInfoGetter(event);
 
+    String subtitle;
+    if (event.endedAt != null) {
+      subtitle =
+          '${_formatTime(event.startedAt)} - ${_formatTime(event.endedAt!)}';
+    } else {
+      subtitle = _formatTime(event.startedAt);
+    }
+
     return _buildEventItem(
       context,
       icon: config.icon,
       title: config.title,
-      subtitle: _formatTime(event.startedAt),
+      subtitle: subtitle,
       color: config.colorGetter(context),
       additionalInfo: additionalInfo,
       showLiveTimer: config.showLiveTimer && event.endedAt == null,

@@ -10,6 +10,8 @@ enum EventType {
   weight,
   height,
   headCircumference,
+  walk,
+  bath,
   other,
 }
 
@@ -147,6 +149,7 @@ class Event {
       'baby_id': babyId,
       'family_id': familyId,
       'event_type': eventType.name,
+      'status': status.name,
       'started_at': Timestamp.fromDate(startedAt),
       'ended_at': endedAt != null ? Timestamp.fromDate(endedAt!) : null,
       'notes': notes,
@@ -184,6 +187,10 @@ class Event {
         return EventType.height;
       case 'headCircumference':
         return EventType.headCircumference;
+      case 'walk':
+        return EventType.walk;
+      case 'bath':
+        return EventType.bath;
       default:
         return EventType.other;
     }

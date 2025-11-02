@@ -6,6 +6,8 @@ import 'package:baby_tracker/screens/add_bottle_screen.dart';
 import 'package:baby_tracker/screens/add_weight_screen.dart';
 import 'package:baby_tracker/screens/add_height_screen.dart';
 import 'package:baby_tracker/screens/add_head_circumference_screen.dart';
+import 'package:baby_tracker/screens/add_walk_screen.dart';
+import 'package:baby_tracker/screens/add_bath_screen.dart';
 import 'package:baby_tracker/screens/medicine/add_medicament_screen.dart';
 
 class HomeAddEventDialog {
@@ -137,6 +139,36 @@ class HomeAddEventDialog {
                           MaterialPageRoute(
                               builder: (_) =>
                                   const AddHeadCircumferenceScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.directions_walk,
+                      label: 'Прогулка',
+                      color: const Color(0xFF22C55E),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddWalkScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.bathtub,
+                      label: 'Купание',
+                      color: const Color(0xFF3B82F6),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddBathScreen()),
                         );
                       },
                     ),

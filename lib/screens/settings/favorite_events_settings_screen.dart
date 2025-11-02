@@ -58,6 +58,16 @@ class _FavoriteEventsSettingsScreenState
       'label': 'Окружность головы',
       'color': const Color(0xFFF97316),
     },
+    EventType.walk: {
+      'icon': Icons.directions_walk,
+      'label': 'Прогулка',
+      'color': const Color(0xFF22C55E),
+    },
+    EventType.bath: {
+      'icon': Icons.bathtub,
+      'label': 'Купание',
+      'color': const Color(0xFF3B82F6),
+    },
   };
 
   @override
