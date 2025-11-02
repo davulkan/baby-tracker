@@ -126,22 +126,22 @@ class HomeAddEventDialog {
                         );
                       },
                     ),
-                    const SizedBox(height: 12),
-                    _buildAddEventButton(
-                      context,
-                      icon: Icons.child_care,
-                      label: 'Окружность головы',
-                      color: const Color(0xFFF97316),
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  const AddHeadCircumferenceScreen()),
-                        );
-                      },
-                    ),
+                    // const SizedBox(height: 12),
+                    // _buildAddEventButton(
+                    //   context,
+                    //   icon: Icons.child_care,
+                    //   label: 'Окружность головы',
+                    //   color: const Color(0xFFF97316),
+                    //   onTap: () {
+                    //     Navigator.pop(context);
+                    //     Navigator.push(
+                    //       context,
+                    //       MaterialPageRoute(
+                    //           builder: (_) =>
+                    //               const AddHeadCircumferenceScreen()),
+                    //     );
+                    //   },
+                    // ),
                     const SizedBox(height: 12),
                     _buildAddEventButton(
                       context,

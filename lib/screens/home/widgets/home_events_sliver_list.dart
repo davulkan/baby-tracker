@@ -276,14 +276,14 @@ class HomeEventsSliverList extends StatelessWidget {
                 ),
               );
               break;
-            case EventType.headCircumference:
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AddHeadCircumferenceScreen(event: event),
-                ),
-              );
-              break;
+            // case EventType.headCircumference:
+            //   Navigator.push(
+            //     context,
+            //     MaterialPageRoute(
+            //       builder: (_) => AddHeadCircumferenceScreen(event: event),
+            //     ),
+            //   );
+            //   break;
             case EventType.walk:
               Navigator.push(
                 context,

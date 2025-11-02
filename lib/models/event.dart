@@ -9,7 +9,7 @@ enum EventType {
   medicine,
   weight,
   height,
-  headCircumference,
+  // headCircumference,
   walk,
   bath,
   other,
@@ -185,8 +185,8 @@ class Event {
         return EventType.weight;
       case 'height':
         return EventType.height;
-      case 'headCircumference':
-        return EventType.headCircumference;
+      // case 'headCircumference':
+      //   return EventType.headCircumference;
       case 'walk':
         return EventType.walk;
       case 'bath':

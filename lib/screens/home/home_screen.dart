@@ -26,17 +26,17 @@ class HomeScreenFull extends StatelessWidget {
                     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                     surfaceTintColor: Colors.transparent,
                     shadowColor: Colors.transparent,
-                    elevation: 0,
+                    elevation: 5,
                     flexibleSpace: const HomeTopBar(),
                   ),
                   const SliverToBoxAdapter(
-                    child: SizedBox(height: 16),
+                    child: SizedBox(height: 8),
                   ),
                   const SliverToBoxAdapter(
                     child: HomeQuickActions(),
                   ),
                   const SliverToBoxAdapter(
-                    child: SizedBox(height: 20),
+                    child: SizedBox(height: 8),
                   ),
                   const HomeEventsSliverList(),
                 ],

@@ -53,11 +53,11 @@ class _FavoriteEventsSettingsScreenState
       'label': 'Рост',
       'color': const Color(0xFF06B6D4),
     },
-    EventType.headCircumference: {
-      'icon': Icons.accessibility,
-      'label': 'Окружность головы',
-      'color': const Color(0xFFF97316),
-    },
+    // EventType.headCircumference: {
+    //   'icon': Icons.accessibility,
+    //   'label': 'Окружность головы',
+    //   'color': const Color(0xFFF97316),
+    // },
     EventType.walk: {
       'icon': Icons.directions_walk,
       'label': 'Прогулка',

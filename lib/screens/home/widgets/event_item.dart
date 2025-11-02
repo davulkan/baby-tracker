@@ -70,8 +70,8 @@ class EventItem extends StatelessWidget {
         return _buildWeightEventItem(context);
       case EventType.height:
         return _buildHeightEventItem(context);
-      case EventType.headCircumference:
-        return _buildHeadCircumferenceEventItem(context);
+      // case EventType.headCircumference:
+      //   return _buildHeadCircumferenceEventItem(context);
       default:
         return _buildSimpleEventItem(context);
     }

@@ -227,18 +227,18 @@ class HomeQuickActions extends StatelessWidget {
           );
         },
       },
-      EventType.headCircumference: {
-        'icon': Icons.accessibility,
-        'label': 'Окружность головы',
-        'color': context.appColors.warningColor,
-        'onTap': () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => const AddHeadCircumferenceScreen()),
-          );
-        },
-      },
+      // EventType.headCircumference: {
+      //   'icon': Icons.accessibility,
+      //   'label': 'Окружность головы',
+      //   'color': context.appColors.warningColor,
+      //   'onTap': () {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(
+      //           builder: (_) => const AddHeadCircumferenceScreen()),
+      //     );
+      //   },
+      // },
       EventType.walk: {
         'icon': Icons.directions_walk,
         'label': 'Прогулка',
