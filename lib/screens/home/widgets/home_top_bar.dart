@@ -91,85 +91,75 @@ class HomeTopBar extends StatelessWidget {
                   ),
 
                 // Чип с фото и именем
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const BabyProfileScreen(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: context.appColors.surfaceColor,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                    );
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: context.appColors.surfaceColor,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                context.appColors.primaryAccent
-                                    .withOpacity(0.2),
-                                context.appColors.secondaryAccent
-                                    .withOpacity(0.2),
-                              ],
-                            ),
-                            image: baby.photoUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(baby.photoUrl!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              context.appColors.primaryAccent
+                                  .withOpacity(0.2),
+                              context.appColors.secondaryAccent
+                                  .withOpacity(0.2),
+                            ],
                           ),
-                          child: baby.photoUrl == null
-                              ? Icon(
-                                  Icons.child_care,
-                                  size: 20,
-                                  color: context.appColors.primaryAccent,
+                          image: baby.photoUrl != null
+                              ? DecorationImage(
+                                  image: NetworkImage(baby.photoUrl!),
+                                  fit: BoxFit.cover,
                                 )
                               : null,
                         ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              baby.name,
-                              style: TextStyle(
-                                color: context.appColors.textPrimaryColor,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        child: baby.photoUrl == null
+                            ? Icon(
+                                Icons.child_care,
+                                size: 20,
+                                color: context.appColors.primaryAccent,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            baby.name,
+                            style: TextStyle(
+                              color: context.appColors.textPrimaryColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
-                            Text(
-                              baby.ageText,
-                              style: TextStyle(
-                                color: context.appColors.textSecondaryColor,
-                                fontSize: 10,
-                              ),
+                          ),
+                          Text(
+                            baby.ageText,
+                            style: TextStyle(
+                              color: context.appColors.textSecondaryColor,
+                              fontSize: 10,
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
 

@@ -1,5 +1,6 @@
 // lib/screens/settings_screen.dart
 import 'package:baby_tracker/screens/settings/widgets/migration.dart';
+import 'package:baby_tracker/screens/settings/favorite_events_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -110,6 +111,19 @@ class SettingsScreen extends StatelessWidget {
             title: 'Тема приложения',
             subtitle: _getThemeModeName(themeProvider.themeMode),
             onTap: () => _showThemeSettings(context, themeProvider),
+          ),
+          SettingItemWidget(
+            icon: Icons.flash_on,
+            title: 'Быстрые действия',
+            subtitle: 'Выберите события для быстрого доступа',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const FavoriteEventsSettingsScreen(),
+                ),
+              );
+            },
           ),
           SettingItemWidget(
             icon: Icons.language,

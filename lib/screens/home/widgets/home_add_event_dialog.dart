@@ -3,6 +3,10 @@ import 'package:baby_tracker/screens/add_sleep_screen.dart';
 import 'package:baby_tracker/screens/add_feeding_screen.dart';
 import 'package:baby_tracker/screens/add_diaper_screen.dart';
 import 'package:baby_tracker/screens/add_bottle_screen.dart';
+import 'package:baby_tracker/screens/add_weight_screen.dart';
+import 'package:baby_tracker/screens/add_height_screen.dart';
+import 'package:baby_tracker/screens/add_head_circumference_screen.dart';
+import 'package:baby_tracker/screens/medicine/add_medicament_screen.dart';
 
 class HomeAddEventDialog {
   static void show(BuildContext context) {
@@ -26,60 +30,134 @@ class HomeAddEventDialog {
               ),
             ),
             const SizedBox(height: 24),
-            _buildAddEventButton(
-              context,
-              icon: Icons.bed,
-              label: 'Сон',
-              color: const Color(0xFF6366F1),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddSleepScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildAddEventButton(
-              context,
-              icon: Icons.child_care,
-              label: 'Кормление',
-              color: const Color(0xFF10B981),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddFeedingScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildAddEventButton(
-              context,
-              icon: Icons.local_drink,
-              label: 'Бутылка',
-              color: const Color(0xFFEC4899),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddBottleScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildAddEventButton(
-              context,
-              icon: Icons.auto_awesome,
-              label: 'Подгузник',
-              color: const Color(0xFFF59E0B),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddDiaperScreen()),
-                );
-              },
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.bed,
+                      label: 'Сон',
+                      color: const Color(0xFF6366F1),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddSleepScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.child_care,
+                      label: 'Кормление',
+                      color: const Color(0xFF10B981),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddFeedingScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.local_drink,
+                      label: 'Бутылка',
+                      color: const Color(0xFFEC4899),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddBottleScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.auto_awesome,
+                      label: 'Подгузник',
+                      color: const Color(0xFFF59E0B),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddDiaperScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.monitor_weight,
+                      label: 'Вес',
+                      color: const Color(0xFF8B5CF6),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddWeightScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.height,
+                      label: 'Рост',
+                      color: const Color(0xFF06B6D4),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddHeightScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.child_care,
+                      label: 'Окружность головы',
+                      color: const Color(0xFFF97316),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const AddHeadCircumferenceScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAddEventButton(
+                      context,
+                      icon: Icons.medical_services,
+                      label: 'Лекарства',
+                      color: const Color(0xFFDC2626),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddMedicamentScreen()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

@@ -3,20 +3,25 @@ import 'package:provider/provider.dart';
 import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/theme_provider.dart';
+import 'package:baby_tracker/providers/settings_provider.dart';
 import 'package:baby_tracker/models/event.dart';
 import 'package:baby_tracker/screens/add_sleep_screen.dart';
 import 'package:baby_tracker/screens/add_feeding_screen.dart';
 import 'package:baby_tracker/screens/add_diaper_screen.dart';
 import 'package:baby_tracker/screens/add_bottle_screen.dart';
 import 'package:baby_tracker/screens/medicine/add_medicament_screen.dart';
+import 'package:baby_tracker/screens/add_weight_screen.dart';
+import 'package:baby_tracker/screens/add_height_screen.dart';
+import 'package:baby_tracker/screens/add_head_circumference_screen.dart';
 
 class HomeQuickActions extends StatelessWidget {
   const HomeQuickActions({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<BabyProvider, EventsProvider>(
-      builder: (context, babyProvider, eventsProvider, child) {
+    return Consumer3<BabyProvider, EventsProvider, SettingsProvider>(
+      builder:
+          (context, babyProvider, eventsProvider, settingsProvider, child) {
         final baby = babyProvider.currentBaby;
 
         if (baby == null) {
@@ -26,82 +31,34 @@ class HomeQuickActions extends StatelessWidget {
         return StreamBuilder<List<Event>>(
           stream: eventsProvider.getTodayEventsStream(baby.id),
           builder: (context, snapshot) {
+            final favoriteTypes = settingsProvider.favoriteEventTypes;
+            final quickActionConfigs = _getQuickActionConfigs(context);
+            if (favoriteTypes.isEmpty) {
+              return const SizedBox();
+            }
             return SizedBox(
               height: 90,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 children: [
-                  _buildQuickActionButton(
-                    context,
-                    icon: Icons.bed,
-                    label: 'Сон',
-                    color: context.appColors.secondaryAccent,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AddSleepScreen()),
-                      );
-                    },
-                  ),
+                  ...favoriteTypes.map((eventType) {
+                    final config = quickActionConfigs[eventType];
+                    if (config == null) return const SizedBox();
+                    return Row(
+                      children: [
+                        _buildQuickActionButton(
+                          context,
+                          icon: config['icon'] as IconData,
+                          label: config['label'] as String,
+                          color: config['color'] as Color,
+                          onTap: config['onTap'] as VoidCallback,
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                    );
+                  }),
                   const SizedBox(width: 12),
-                  _buildQuickActionButton(
-                    context,
-                    icon: Icons.child_care,
-                    label: 'Кормление',
-                    color: context.appColors.successColor,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AddFeedingScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _buildQuickActionButton(
-                    context,
-                    icon: Icons.local_drink,
-                    label: 'Бутылка',
-                    color: context.appColors.errorColor,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AddBottleScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _buildQuickActionButton(
-                    context,
-                    icon: Icons.auto_awesome,
-                    label: 'Подгузник',
-                    color: context.appColors.primaryAccent,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AddDiaperScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _buildQuickActionButton(
-                    context,
-                    icon: Icons.medical_services,
-                    label: 'Лекарство',
-                    color: context.appColors.warningColor,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AddMedicamentScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 24),
                 ],
               ),
             );
@@ -186,5 +143,100 @@ class HomeQuickActions extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Map<EventType, Map<String, dynamic>> _getQuickActionConfigs(
+      BuildContext context) {
+    return {
+      EventType.sleep: {
+        'icon': Icons.bed,
+        'label': 'Сон',
+        'color': context.appColors.secondaryAccent,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddSleepScreen()),
+          );
+        },
+      },
+      EventType.feeding: {
+        'icon': Icons.child_care,
+        'label': 'Кормление',
+        'color': context.appColors.successColor,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddFeedingScreen()),
+          );
+        },
+      },
+      EventType.bottle: {
+        'icon': Icons.local_drink,
+        'label': 'Бутылка',
+        'color': context.appColors.errorColor,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddBottleScreen()),
+          );
+        },
+      },
+      EventType.diaper: {
+        'icon': Icons.auto_awesome,
+        'label': 'Подгузник',
+        'color': context.appColors.primaryAccent,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddDiaperScreen()),
+          );
+        },
+      },
+      EventType.medicine: {
+        'icon': Icons.medical_services,
+        'label': 'Лекарство',
+        'color': context.appColors.warningColor,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddMedicamentScreen()),
+          );
+        },
+      },
+      EventType.weight: {
+        'icon': Icons.monitor_weight,
+        'label': 'Вес',
+        'color': context.appColors.primaryAccent,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddWeightScreen()),
+          );
+        },
+      },
+      EventType.height: {
+        'icon': Icons.height,
+        'label': 'Рост',
+        'color': context.appColors.secondaryAccent,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddHeightScreen()),
+          );
+        },
+      },
+      EventType.headCircumference: {
+        'icon': Icons.accessibility,
+        'label': 'Окружность головы',
+        'color': context.appColors.warningColor,
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const AddHeadCircumferenceScreen()),
+          );
+        },
+      },
+    };
   }
 }

@@ -11,6 +11,31 @@ import 'package:baby_tracker/models/medicine.dart';
 import 'package:baby_tracker/models/medicine_details.dart';
 import 'package:baby_tracker/screens/home/widgets/live_timer_widget.dart';
 
+class EventTypeConfig {
+  final IconData icon;
+  final String title;
+  final Color Function(BuildContext context) colorGetter;
+  final String? Function(Event event) additionalInfoGetter;
+  final bool showLiveTimer;
+
+  const EventTypeConfig({
+    required this.icon,
+    required this.title,
+    required this.colorGetter,
+    required this.additionalInfoGetter,
+    this.showLiveTimer = false,
+  });
+}
+
+final Map<EventType, EventTypeConfig> _eventTypeConfigs = {
+  EventType.other: EventTypeConfig(
+    icon: Icons.event,
+    title: 'Событие',
+    colorGetter: (context) => context.appColors.textSecondaryColor,
+    additionalInfoGetter: (event) => null,
+  ),
+};
+
 class EventItem extends StatelessWidget {
   final Event event;
 
@@ -29,59 +54,30 @@ class EventItem extends StatelessWidget {
         return _buildBottleEventItem(context);
       case EventType.medicine:
         return _buildMedicineEventItem(context);
+      case EventType.weight:
+        return _buildWeightEventItem(context);
+      case EventType.height:
+        return _buildHeightEventItem(context);
+      case EventType.headCircumference:
+        return _buildHeadCircumferenceEventItem(context);
       default:
-        return _buildGenericEventItem(context);
+        return _buildSimpleEventItem(context);
     }
   }
 
-  Widget _buildGenericEventItem(BuildContext context) {
-    IconData icon;
-    String title;
-    String subtitle;
-    Color color;
-    String? duration;
-
-    switch (event.eventType) {
-      case EventType.sleep:
-        icon = Icons.bed;
-        title = 'Сон';
-        color = context.appColors.secondaryAccent;
-        break;
-      case EventType.diaper:
-        icon = Icons.auto_awesome;
-        title = 'Подгузник';
-        color = context.appColors.primaryAccent;
-        break;
-      case EventType.bottle:
-        icon = Icons.local_drink;
-        title = 'Бутылка';
-        color = context.appColors.errorColor;
-        break;
-      default:
-        icon = Icons.event;
-        title = 'Событие';
-        color = context.appColors.textSecondaryColor;
-    }
-
-    if (event.endedAt != null) {
-      final dur = event.duration!;
-      duration = '${dur.inHours}ч ${dur.inMinutes % 60}м';
-      subtitle =
-          '${_formatTime(event.startedAt)} - ${_formatTime(event.endedAt!)}';
-    } else {
-      subtitle = '${_formatTime(event.startedAt)} - Сейчас';
-      duration = null;
-    }
+  Widget _buildSimpleEventItem(BuildContext context) {
+    final config = _eventTypeConfigs[event.eventType] ??
+        _eventTypeConfigs[EventType.other]!;
+    final additionalInfo = config.additionalInfoGetter(event);
 
     return _buildEventItem(
       context,
-      icon: icon,
-      title: title,
-      subtitle: subtitle,
-      duration: duration,
-      color: color,
-      showLiveTimer:
-          event.endedAt == null && event.eventType == EventType.sleep,
+      icon: config.icon,
+      title: config.title,
+      subtitle: _formatTime(event.startedAt),
+      color: config.colorGetter(context),
+      additionalInfo: additionalInfo,
+      showLiveTimer: config.showLiveTimer && event.endedAt == null,
     );
   }
 
@@ -239,19 +235,6 @@ class EventItem extends StatelessWidget {
     );
   }
 
-  Widget _buildBottleEventItem(BuildContext context) {
-    String? volumeInfo = event.volumeMl != null ? '${event.volumeMl} мл' : null;
-
-    return _buildEventItem(
-      context,
-      icon: Icons.local_drink,
-      title: 'Бутылка',
-      subtitle: _formatTime(event.startedAt),
-      color: context.appColors.errorColor,
-      additionalInfo: volumeInfo,
-    );
-  }
-
   Widget _buildMedicineEventItem(BuildContext context) {
     return Consumer<EventsProvider>(
       builder: (context, eventsProvider, child) {
@@ -291,6 +274,60 @@ class EventItem extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _buildBottleEventItem(BuildContext context) {
+    String? volumeInfo = event.volumeMl != null ? '${event.volumeMl} мл' : null;
+
+    return _buildEventItem(
+      context,
+      icon: Icons.local_drink,
+      title: 'Бутылка',
+      subtitle: _formatTime(event.startedAt),
+      color: context.appColors.errorColor,
+      additionalInfo: volumeInfo,
+    );
+  }
+
+  Widget _buildWeightEventItem(BuildContext context) {
+    String? weightInfo = event.weightKg != null ? '${event.weightKg} кг' : null;
+
+    return _buildEventItem(
+      context,
+      icon: Icons.monitor_weight,
+      title: 'Вес',
+      subtitle: _formatTime(event.startedAt),
+      color: context.appColors.primaryAccent,
+      additionalInfo: weightInfo,
+    );
+  }
+
+  Widget _buildHeightEventItem(BuildContext context) {
+    String? heightInfo = event.heightCm != null ? '${event.heightCm} см' : null;
+
+    return _buildEventItem(
+      context,
+      icon: Icons.height,
+      title: 'Рост',
+      subtitle: _formatTime(event.startedAt),
+      color: context.appColors.secondaryAccent,
+      additionalInfo: heightInfo,
+    );
+  }
+
+  Widget _buildHeadCircumferenceEventItem(BuildContext context) {
+    String? headInfo = event.headCircumferenceCm != null
+        ? '${event.headCircumferenceCm} см'
+        : null;
+
+    return _buildEventItem(
+      context,
+      icon: Icons.accessibility,
+      title: 'Окружность головы',
+      subtitle: _formatTime(event.startedAt),
+      color: context.appColors.warningColor,
+      additionalInfo: headInfo,
     );
   }
 
@@ -338,15 +375,6 @@ class EventItem extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (additionalInfo != null)
-                  Text(
-                    additionalInfo,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
                 Text(
                   subtitle,
                   style: TextStyle(
@@ -359,27 +387,53 @@ class EventItem extends StatelessWidget {
               ],
             ),
           ),
-          if (duration != null || showLiveTimer)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: showLiveTimer
-                  ? LiveTimerWidget(
-                      event: event,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (additionalInfo != null)
+                Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border:
+                        Border.all(color: color.withOpacity(0.3), width: 0.5),
+                  ),
+                  child: Text(
+                    additionalInfo,
+                    style: TextStyle(
                       color: color,
-                    )
-                  : Text(
-                      duration!,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
-            ),
+                  ),
+                ),
+              if (duration != null || showLiveTimer)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: showLiveTimer
+                      ? LiveTimerWidget(
+                          event: event,
+                          color: color,
+                        )
+                      : Text(
+                          duration!,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+            ],
+          ),
         ],
       ),
     );

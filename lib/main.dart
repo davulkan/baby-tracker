@@ -8,6 +8,7 @@ import 'package:baby_tracker/providers/baby_provider.dart';
 import 'package:baby_tracker/providers/connectivity_provider.dart';
 import 'package:baby_tracker/providers/events_provider.dart';
 import 'package:baby_tracker/providers/theme_provider.dart' as theme;
+import 'package:baby_tracker/providers/settings_provider.dart';
 import 'package:baby_tracker/screens/home/home_screen.dart';
 import 'package:baby_tracker/screens/splash_screen.dart';
 import 'package:baby_tracker/screens/auth_screen.dart';
@@ -39,6 +40,9 @@ class MyApp extends StatelessWidget {
       providers: [
         // ThemeProvider
         ChangeNotifierProvider(create: (_) => theme.ThemeProvider()),
+
+        // SettingsProvider
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
 
         // ConnectivityProvider
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),

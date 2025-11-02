@@ -345,6 +345,11 @@ class EventsProvider with ChangeNotifier {
         case EventType.medicine:
           await _firestore.collection('medicine_details').doc(eventId).delete();
           break;
+        // Для измерений (вес, рост, окружность головы) детали хранятся в самом событии
+        case EventType.weight:
+        case EventType.height:
+        case EventType.headCircumference:
+          break;
         default:
           break;
       }
@@ -568,6 +573,144 @@ class EventsProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       debugPrint('Error adding medicine event: $e');
+      return null;
+    }
+  }
+
+  // Добавление события веса
+  Future<String?> addWeightEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime time,
+    required double weightKg,
+    required String createdBy,
+    required String createdByName,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Создаем основное событие
+      final event = Event(
+        id: '',
+        babyId: babyId,
+        familyId: familyId,
+        eventType: EventType.weight,
+        startedAt: time,
+        notes: notes,
+        createdAt: DateTime.now(),
+        lastModifiedAt: DateTime.now(),
+        createdBy: createdBy,
+        createdByName: createdByName,
+        status: EventStatus.completed,
+        weightKg: weightKg,
+      );
+
+      final eventDoc =
+          await _firestore.collection('events').add(event.toFirestore());
+
+      _isLoading = false;
+      notifyListeners();
+
+      return eventDoc.id;
+    } catch (e) {
+      _error = 'Ошибка добавления веса';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Error adding weight event: $e');
+      return null;
+    }
+  }
+
+  // Добавление события роста
+  Future<String?> addHeightEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime time,
+    required double heightCm,
+    required String createdBy,
+    required String createdByName,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Создаем основное событие
+      final event = Event(
+        id: '',
+        babyId: babyId,
+        familyId: familyId,
+        eventType: EventType.height,
+        startedAt: time,
+        notes: notes,
+        createdAt: DateTime.now(),
+        lastModifiedAt: DateTime.now(),
+        createdBy: createdBy,
+        createdByName: createdByName,
+        status: EventStatus.completed,
+        heightCm: heightCm,
+      );
+
+      final eventDoc =
+          await _firestore.collection('events').add(event.toFirestore());
+
+      _isLoading = false;
+      notifyListeners();
+
+      return eventDoc.id;
+    } catch (e) {
+      _error = 'Ошибка добавления роста';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Error adding height event: $e');
+      return null;
+    }
+  }
+
+  // Добавление события окружности головы
+  Future<String?> addHeadCircumferenceEvent({
+    required String babyId,
+    required String familyId,
+    required DateTime time,
+    required double circumferenceCm,
+    required String createdBy,
+    required String createdByName,
+    String? notes,
+  }) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Создаем основное событие
+      final event = Event(
+        id: '',
+        babyId: babyId,
+        familyId: familyId,
+        eventType: EventType.headCircumference,
+        startedAt: time,
+        notes: notes,
+        createdAt: DateTime.now(),
+        lastModifiedAt: DateTime.now(),
+        createdBy: createdBy,
+        createdByName: createdByName,
+        status: EventStatus.completed,
+        headCircumferenceCm: circumferenceCm,
+      );
+
+      final eventDoc =
+          await _firestore.collection('events').add(event.toFirestore());
+
+      _isLoading = false;
+      notifyListeners();
+
+      return eventDoc.id;
+    } catch (e) {
+      _error = 'Ошибка добавления окружности головы';
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('Error adding head circumference event: $e');
       return null;
     }
   }

@@ -11,6 +11,9 @@ import 'package:baby_tracker/screens/add_feeding_screen.dart';
 import 'package:baby_tracker/screens/add_diaper_screen.dart';
 import 'package:baby_tracker/screens/add_bottle_screen.dart';
 import 'package:baby_tracker/screens/medicine/add_medicament_screen.dart';
+import 'package:baby_tracker/screens/add_weight_screen.dart';
+import 'package:baby_tracker/screens/add_height_screen.dart';
+import 'package:baby_tracker/screens/add_head_circumference_screen.dart';
 
 class HomeEventsSliverList extends StatelessWidget {
   const HomeEventsSliverList({super.key});
@@ -252,6 +255,30 @@ class HomeEventsSliverList extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (_) => AddMedicamentScreen(event: event),
+                ),
+              );
+              break;
+            case EventType.weight:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddWeightScreen(event: event),
+                ),
+              );
+              break;
+            case EventType.height:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddHeightScreen(event: event),
+                ),
+              );
+              break;
+            case EventType.headCircumference:
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddHeadCircumferenceScreen(event: event),
                 ),
               );
               break;

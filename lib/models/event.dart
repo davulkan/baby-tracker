@@ -7,8 +7,9 @@ enum EventType {
   diaper,
   bottle,
   medicine,
-  health,
-  milestone,
+  weight,
+  height,
+  headCircumference,
   other,
 }
 
@@ -43,6 +44,11 @@ class Event {
   final BottleType? bottleType;
   final double? volumeMl;
 
+  // Поля для измерений
+  final double? weightKg;
+  final double? heightCm;
+  final double? headCircumferenceCm;
+
   bool get isActive => status == EventStatus.active;
   Duration get currentDuration => DateTime.now().difference(startedAt);
   // Поля для таймеров
@@ -66,6 +72,9 @@ class Event {
     this.version = 1,
     this.bottleType,
     this.volumeMl,
+    this.weightKg,
+    this.heightCm,
+    this.headCircumferenceCm,
   });
 
   factory Event.fromFirestore(DocumentSnapshot doc) {
@@ -99,6 +108,15 @@ class Event {
           : null,
       volumeMl: data['volume_ml'] != null
           ? (data['volume_ml'] as num).toDouble()
+          : null,
+      weightKg: data['weight_kg'] != null
+          ? (data['weight_kg'] as num).toDouble()
+          : null,
+      heightCm: data['height_cm'] != null
+          ? (data['height_cm'] as num).toDouble()
+          : null,
+      headCircumferenceCm: data['head_circumference_cm'] != null
+          ? (data['head_circumference_cm'] as num).toDouble()
           : null,
     );
   }
@@ -141,6 +159,10 @@ class Event {
       'version': version,
       if (bottleType != null) 'bottle_type': bottleType!.name,
       if (volumeMl != null) 'volume_ml': volumeMl,
+      if (weightKg != null) 'weight_kg': weightKg,
+      if (heightCm != null) 'height_cm': heightCm,
+      if (headCircumferenceCm != null)
+        'head_circumference_cm': headCircumferenceCm,
     };
   }
 
@@ -156,10 +178,12 @@ class Event {
         return EventType.bottle;
       case 'medicine':
         return EventType.medicine;
-      case 'health':
-        return EventType.health;
-      case 'milestone':
-        return EventType.milestone;
+      case 'weight':
+        return EventType.weight;
+      case 'height':
+        return EventType.height;
+      case 'headCircumference':
+        return EventType.headCircumference;
       default:
         return EventType.other;
     }
@@ -192,6 +216,9 @@ class Event {
     EventStatus? status,
     BottleType? bottleType,
     double? volumeMl,
+    double? weightKg,
+    double? heightCm,
+    double? headCircumferenceCm,
   }) {
     return Event(
       id: id ?? this.id,
@@ -211,6 +238,9 @@ class Event {
       version: version ?? this.version,
       bottleType: bottleType ?? this.bottleType,
       volumeMl: volumeMl ?? this.volumeMl,
+      weightKg: weightKg ?? this.weightKg,
+      heightCm: heightCm ?? this.heightCm,
+      headCircumferenceCm: headCircumferenceCm ?? this.headCircumferenceCm,
     );
   }
 }

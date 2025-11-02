@@ -45,13 +45,13 @@ class HomeScreenFull extends StatelessWidget {
           ],
         ),
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {
-      //     HomeAddEventDialog.show(context);
-      //   },
-      //   backgroundColor: context.appColors.secondaryAccent,
-      //   child: const Icon(Icons.add, size: 32),
-      // ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          HomeAddEventDialog.show(context);
+        },
+        backgroundColor: context.appColors.secondaryAccent,
+        child: const Icon(Icons.add, size: 32),
+      ),
     );
   }
 }
