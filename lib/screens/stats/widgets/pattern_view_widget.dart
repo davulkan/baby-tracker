@@ -157,6 +157,8 @@ class PatternViewWidget extends StatelessWidget {
       sections.add(DaySectionWidget(
         title: title,
         stats: _calculateDayStats(dayEvents, date, context),
+        selectedTypes: selectedTypes,
+        events: dayEvents,
       ));
 
       // Добавляем отступ между секциями, кроме последней

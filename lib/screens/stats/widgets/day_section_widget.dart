@@ -2,15 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:baby_tracker/screens/stats/widgets/pattern_chart_widget.dart';
 import 'package:baby_tracker/screens/stats/widgets/stats_summary_widget.dart';
 import 'package:baby_tracker/providers/theme_provider.dart';
+import 'package:baby_tracker/models/event.dart';
 
 class DaySectionWidget extends StatelessWidget {
   final String title;
   final Map<String, dynamic> stats;
+  final Set<EventType> selectedTypes;
+  final List<Event> events;
 
   const DaySectionWidget({
     super.key,
     required this.title,
     required this.stats,
+    required this.selectedTypes,
+    required this.events,
   });
 
   @override
@@ -34,7 +39,11 @@ class DaySectionWidget extends StatelessWidget {
         const SizedBox(height: 16),
 
         // Сводка
-        StatsSummaryWidget(stats: stats),
+        StatsSummaryWidget(
+          stats: stats,
+          selectedTypes: selectedTypes,
+          events: events,
+        ),
       ],
     );
   }
