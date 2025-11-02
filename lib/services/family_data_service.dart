@@ -20,28 +20,30 @@ class FamilyDataService {
           .where('family_id', isEqualTo: familyId)
           .get();
 
-      final List<String> babyIds = babiesSnapshot.docs.map((doc) => doc.id).toList();
+      final List<String> babyIds =
+          babiesSnapshot.docs.map((doc) => doc.id).toList();
       debugPrint('Найдено детей: ${babyIds.length}');
 
       // Batch для группировки операций удаления
       WriteBatch batch = _firestore.batch();
       int operationsCount = 0;
-      
+
       // Удаляем события для каждого ребенка
       for (String babyId in babyIds) {
         debugPrint('Удаляем события для ребенка: $babyId');
-        
+
         // Получаем все события ребенка
         final eventsSnapshot = await _firestore
             .collection('events')
             .where('baby_id', isEqualTo: babyId)
             .get();
 
-        debugPrint('Найдено событий для ребенка $babyId: ${eventsSnapshot.docs.length}');
+        debugPrint(
+            'Найдено событий для ребенка $babyId: ${eventsSnapshot.docs.length}');
 
         for (var eventDoc in eventsSnapshot.docs) {
           final eventId = eventDoc.id;
-          
+
           // Удаляем основное событие
           batch.delete(_firestore.collection('events').doc(eventId));
           operationsCount++;
@@ -51,7 +53,8 @@ class FamilyDataService {
           operationsCount += 6; // 6 коллекций деталей
 
           // Если достигли лимита операций в batch, выполняем его
-          if (operationsCount >= 450) { // Оставляем запас до лимита 500
+          if (operationsCount >= 450) {
+            // Оставляем запас до лимита 500
             await batch.commit();
             batch = _firestore.batch();
             operationsCount = 0;
@@ -101,7 +104,6 @@ class FamilyDataService {
 
       debugPrint('Успешно удалены все данные семьи: $familyId');
       return true;
-
     } catch (e) {
       debugPrint('Ошибка при удалении данных семьи: $e');
       return false;
@@ -113,7 +115,7 @@ class FamilyDataService {
     // Список всех коллекций с деталями событий
     final detailCollections = [
       'sleep_details',
-      'feeding_details', 
+      'feeding_details',
       'diaper_details',
       'medicine_details',
       'weight_details',
@@ -138,9 +140,10 @@ class FamilyDataService {
           .collection('babies')
           .where('family_id', isEqualTo: familyId)
           .get();
-      
+
       babiesCount = babiesSnapshot.docs.length;
-      final List<String> babyIds = babiesSnapshot.docs.map((doc) => doc.id).toList();
+      final List<String> babyIds =
+          babiesSnapshot.docs.map((doc) => doc.id).toList();
 
       // Считаем события для каждого ребенка
       for (String babyId in babyIds) {
@@ -163,7 +166,6 @@ class FamilyDataService {
         'babies': babiesCount,
         'medicines': medicinesCount,
       };
-
     } catch (e) {
       debugPrint('Ошибка при подсчете данных семьи: $e');
       return {
@@ -192,7 +194,7 @@ class FamilyDataService {
 
       for (var eventDoc in eventsSnapshot.docs) {
         final eventId = eventDoc.id;
-        
+
         // Удаляем основное событие
         batch.delete(_firestore.collection('events').doc(eventId));
         operationsCount++;
@@ -215,7 +217,6 @@ class FamilyDataService {
 
       debugPrint('Успешно удалены данные ребенка: $babyId');
       return true;
-
     } catch (e) {
       debugPrint('Ошибка при удалении данных ребенка: $e');
       return false;

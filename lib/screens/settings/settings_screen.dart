@@ -495,7 +495,7 @@ class SettingsScreen extends StatelessWidget {
       BuildContext context, AuthProvider authProvider) async {
     // Сначала получаем количество данных для информации
     final dataCount = await authProvider.getFamilyDataCount();
-    
+
     if (!context.mounted) return;
 
     // Показываем дополнительное подтверждение с информацией о данных
@@ -611,7 +611,8 @@ class SettingsScreen extends StatelessWidget {
 
         if (success) {
           // Очищаем данные в провайдерах
-          final babyProvider = Provider.of<BabyProvider>(context, listen: false);
+          final babyProvider =
+              Provider.of<BabyProvider>(context, listen: false);
           babyProvider.clearData();
 
           ScaffoldMessenger.of(context).showSnackBar(

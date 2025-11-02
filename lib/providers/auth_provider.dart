@@ -361,18 +361,17 @@ class AuthProvider with ChangeNotifier {
 
       // Используем сервис для удаления всех данных семьи
       final success = await _familyDataService.deleteAllFamilyData(_familyId!);
-      
+
       _isLoading = false;
-      
+
       if (success) {
         debugPrint('Все данные семьи успешно удалены');
       } else {
         _error = 'Ошибка при удалении данных семьи';
       }
-      
+
       notifyListeners();
       return success;
-      
     } catch (e) {
       _error = 'Ошибка при удалении данных семьи: $e';
       _isLoading = false;
